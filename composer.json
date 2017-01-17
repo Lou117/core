@@ -1,0 +1,11 @@
+{
+    "name": "lou117/core",
+    "require": {
+        "nikic/fast-route": "1.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lou117\\Core\\": "src/"
+        }
+    }
+}
