@@ -211,7 +211,7 @@
 
             }
 
-            $try = json_encode($this->body, true);
+            $try = json_decode($this->body, true);
             if ($try !== null){
 
                 $this->body = $try;
