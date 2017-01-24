@@ -154,7 +154,8 @@
          * - lang : contains accepted language range;
          * - quality : contains quality score for language range.
          *
-         * Returned array is sorted descending according to quality score (so preferred language range will be at index 0).
+         * Returned array is sorted descending according to quality score (so preferred language range will be at index
+         * 0).
          *
          * If request has no Accept-Language header, this method will return an empty array.
          * @return array
@@ -215,6 +216,12 @@
             if ($try !== null){
 
                 $this->body = $try;
+                array_walk_recursive($this->body, function(&$value){
+
+                    $value = trim($value);
+
+                });
+
                 return self::PARSE_200;
 
             } else {
