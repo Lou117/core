@@ -57,7 +57,7 @@
          */
         public function send(string $status_code = null, $body = null, array $headers = null)
         {
-            if (!empty($body)) {
+            if ($body !== null) {
 
                 $this->setBody($body);
 
