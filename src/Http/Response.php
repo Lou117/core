@@ -84,36 +84,40 @@
             $message = self::HTTP_PROTOCOL . ' ' . $this->statusCode;
             $this->headers[] = $message;
 
-            $contentType = 'application/json';
+            $body = '';
+            $contentType = 'text/plain';
 
-            if ($this->body instanceof HalResource) {
+            if (is_array($this->body) || is_object($this->body)) {
 
-                $contentType = 'application/hal+json';
+                $contentType = 'application/json';
 
+                if ($this->body instanceof HalResource) {
+
+                    $contentType = 'application/hal+json';
+
+                }
+
+                if ($this->body instanceof Problem) {
+
+                    $this->body->status = $this->statusCode;
+                    $this->body->title = substr($this->statusCode, 4);
+
+                    $contentType = 'application/problem+json';
+
+                }
+
+                $body = json_encode($this->body);
+                if ($body === null) {
+
+                    $contentType = 'text/plain';
+
+                }
             }
 
-            if ($this->body instanceof Problem) {
-
-                $this->body->status = $this->statusCode;
-                $this->body->title = substr($this->statusCode, 4);
-
-                $contentType = 'application/problem+json';
-
-            }
-
-            $this->headers[] = 'Content-type: ' . $contentType;
+            $this->headers[] = 'Content-type: '.$contentType;
             $this->sendHeaders();
 
-            if (!empty($this->body)) {
-
-                $try = json_encode($this->body);
-                die(!empty($try) ? $try : '');
-
-            } else {
-
-                die();
-
-            }
+            die($body);
         }
 
         /**
