@@ -42,7 +42,7 @@
 
         /**
          * Request query string.
-         * @var string
+         * @var array
          */
         public $queryString;
 
@@ -77,11 +77,13 @@
 
             }
 
-            $this->queryString = $_SERVER['QUERY_STRING'] ?? '';
+            $queryString = $_SERVER['QUERY_STRING'] ?? '';
 
             $this->method = $_SERVER['REQUEST_METHOD'];
-            $this->uri = str_replace('?'.$this->queryString, '', $_SERVER['REQUEST_URI']);
+            $this->uri = str_replace('?'.$queryString, '', $_SERVER['REQUEST_URI']);
             $this->url = $_SERVER['REQUEST_SCHEME'].'://'.$_SERVER['SERVER_NAME'].'/'.$this->uri;
+
+            parse_str($queryString, $this->queryString);
 
             // Using php://input stream allows retrieval of request body with all HTTP methods (not only POST)
             $this->body = file_get_contents('php://input');
