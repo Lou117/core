@@ -107,6 +107,8 @@
                 self::getRoutes();
                 $route = self::dispatch();
 
+                session_start();
+
                 $moduleClass = $route->moduleNamespace.'\Module';
                 new $moduleClass(self::$request, self::$response, $route);
 
