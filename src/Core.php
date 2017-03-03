@@ -231,35 +231,20 @@
         }
 
         /**
-         * Gathers default and local configuration files, returning final merged configuration.
+         * Searches for local configuration file, returning its content.
          * @param string $type - 'settings' or 'routes'.
          * @return array
          */
         protected static function getConfigFile(string $type):array
         {
             $localFilePath = self::$applicationDirectory."config/{$type}.php";
-            $defaultFilePath = self::$applicationDirectory."config/default/{$type}.php";
-            if (!file_exists($localFilePath) && !file_exists($defaultFilePath)) {
+            if (!file_exists($localFilePath)) {
 
                 return array();
 
             }
 
-            $config = [
-                'local' => file_exists($localFilePath) ? require $localFilePath : array(),
-                'default' => require $defaultFilePath
-            ];
-
-            foreach ($config as $type => $content) {
-
-                if (!is_array($content)) {
-
-                    $config[$type] = array();
-
-                }
-
-            }
-
-            return array_replace_recursive($config['default'], $config['local']);
+            $localSettings = require($localFilePath);
+            return is_array($localSettings) ? $localSettings : [];
         }
     }
