@@ -1,13 +1,13 @@
 <?php
     namespace Lou117\Core;
 
-    use Lou117\Core\Exception\SettingsNotFoundException;
-    use Lou117\Core\Exception\RoutesNotFoundException;
-    use Lou117\Core\Exchange\Problem;
-    use Lou117\Core\Http\Request;
-    use Lou117\Core\Http\Response;
     use \Exception;
     use \FastRoute;
+    use Lou117\Core\Http\Request;
+    use Lou117\Core\Http\Response;
+    use Lou117\Core\Exchange\Problem;
+    use Composer\Autoload\ClassLoader;
+    use Lou117\Core\Exception\SettingsNotFoundException;
 
     class Core
     {
@@ -16,6 +16,11 @@
          * @var string
          */
         public static $applicationDirectory;
+
+        /**
+         * @var ClassLoader
+         */
+        protected static $composerLoader;
 
         /**
          * HTTP request.
@@ -52,12 +57,14 @@
          * Core main method, to be called by public/index.php.
          * This method has an internal try-catch block, so there is no real need to surround a Core::boot call with
          * another try-catch block.
-         * @param string $application_directory - Application root directory path, to be used for retrieval of all
-         * needed files (mainly routes and settings) and FastRoute cache writing.
+         * @param string $application_directory - application root directory path, to be used for retrieval of all
+         * needed files (mainly settings) and FastRoute cache writing.
+         * @param ClassLoader $composer_loader - Composer loader to be use for registering modules at runtime.
          */
-        public static function boot(string $application_directory)
+        public static function boot(string $application_directory, ClassLoader $composer_loader)
         {
             self::$response = new Response();
+            self::$composerLoader = $composer_loader;
 
             try {
 
@@ -78,6 +85,12 @@
                     Problem::$debugMode = true;
 
                 }
+
+
+
+                /* Modules loading */
+
+                self::loadModules();
 
 
 
@@ -104,18 +117,21 @@
 
                 /* Routing */
 
-                self::getRoutes();
                 $route = self::dispatch();
+
+                /**/
+
+
 
                 session_start();
 
-                $moduleClass = $route->moduleNamespace.'\Module';
+                $moduleClass = $route->module->composerNamespace.'Module';
                 new $moduleClass(self::$request, self::$response, $route);
 
             } catch (Exception $e) {
 
                 // Will die()
-                self::$response->send(Response::HTTP_503, new Problem($e));
+                self::$response->send(Response::HTTP_500, new Problem($e));
 
             }
         }
@@ -154,7 +170,7 @@
 
                 foreach ($routes as $routeObject) {
 
-                    $r->addRoute($routeObject->allowedMethods, $routeObject->endpoint, $routeObject->name);
+                    $r->addRoute($routeObject->allowedMethods, $routeObject->endpoint, $routeObject->fullname);
 
                 }
 
@@ -181,35 +197,6 @@
             $route->uriData = $routeInfo[2];
 
             return $route;
-        }
-
-        /**
-         * Retrieves and computes routes configuration file, storing found routes on Core::$routes property as an
-         * associative array where keys are route identifiers and values are Lou117\Core\Route instances.
-         * @return bool
-         */
-        protected static function getRoutes():bool
-        {
-            $routes = self::getConfigFile('routes');
-            if (empty($routes)) {
-
-                throw new RoutesNotFoundException();
-
-            }
-
-            foreach ($routes as $routeName => $routeConfig) {
-
-                $route = new Route();
-                $route->name = $routeName;
-                $route->moduleNamespace = $routeConfig['moduleNamespace'];
-                $route->endpoint = $routeConfig['endpoint'];
-                $route->allowedMethods = $routeConfig['allowedMethods'];
-
-                self::$routes[$route->name] = $route;
-
-            }
-
-            return true;
         }
 
         /**
@@ -246,5 +233,83 @@
 
             $localSettings = require($localFilePath);
             return is_array($localSettings) ? $localSettings : [];
+        }
+
+        /**
+         * Loads modules declared by settings file, adding them to Composer and loading their routes (if any).
+         * @return bool
+         */
+        protected static function loadModules():bool
+        {
+            $default = [
+                'composer' => [
+                    'namespace' => null,
+                    'path' => null
+                ],
+                'routes' => null
+            ];
+
+            foreach (self::$settings['modules'] as $moduleName => $moduleConfig) {
+
+                $moduleConfig = array_replace_recursive($default, $moduleConfig);
+
+                $module = new Module();
+                $module->name = $moduleName;
+                $module->routes = $moduleConfig['routes'];
+                $module->composerPath = $moduleConfig['composer']['path'];
+                $module->composerNamespace = $moduleConfig['composer']['namespace'];
+
+                if (!empty($module->composerNamespace) && !empty($module->composerPath)) {
+
+                    self::$composerLoader->addPsr4($module->composerNamespace, $module->composerPath);
+
+                }
+
+                if (!empty($module->routes) && file_exists($module->routes)) {
+
+                    $moduleRoutes = require($module->routes);
+                    if (is_array($moduleRoutes)) {
+
+                        self::loadRoutes($module, $moduleRoutes);
+
+                    }
+
+                }
+
+            }
+
+            return true;
+        }
+
+        /**
+         * Loads module routes, adding them to internal routing table.
+         * @param Module $module - Module configuration.
+         * @param array $routes - Module routes.
+         * @return bool
+         */
+        protected static function loadRoutes(Module $module, array $routes) {
+
+            $default = [
+                'allowedMethods' => [],
+                'endpoint' => ''
+            ];
+
+            foreach ($routes as $routeName => $routeConfig) {
+
+                $routeConfig = array_replace_recursive($default, $routeConfig);
+
+                $route = new Route();
+                $route->name = $routeName;
+                $route->module = $module;
+                $route->endpoint = $routeConfig['endpoint'];
+                $route->fullname = $module->name.$route->name;
+                $route->allowedMethods = $routeConfig['allowedMethods'];
+
+                self::$routes[$route->fullname] = $route;
+
+            }
+
+            return true;
+
         }
     }
