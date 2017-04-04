@@ -265,9 +265,9 @@
 
                 }
 
-                if (!empty($module->routes) && file_exists($module->routes)) {
+                if (!empty($module->routes) && file_exists(self::$applicationDirectory.$module->routes)) {
 
-                    $moduleRoutes = require($module->routes);
+                    $moduleRoutes = require(self::$applicationDirectory.$module->routes);
                     if (is_array($moduleRoutes)) {
 
                         self::loadRoutes($module, $moduleRoutes);
