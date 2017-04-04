@@ -261,7 +261,7 @@
 
                 if (!empty($module->composerNamespace) && !empty($module->composerPath)) {
 
-                    self::$composerLoader->addPsr4($module->composerNamespace, $module->composerPath);
+                    self::$composerLoader->addPsr4($module->composerNamespace, self::$applicationDirectory.$module->composerPath);
 
                 }
 
