@@ -40,10 +40,8 @@ class ProblemResponse extends AbstractResponse
 
         }
 
-        $this->body = $body;
-
-        $this->body->status = $this->statusCode;
-        $this->body->title = substr($this->statusCode, 4);
+        $body->status = $this->statusCode;
+        $body->title = substr($this->statusCode, 4);
 
         $this->body = json_encode($body);
         if ($body === null) {
