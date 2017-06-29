@@ -60,7 +60,7 @@ abstract class AbstractResponse
      * @param string $header_value - value for HTTP header.
      * @return AbstractResponse
      */
-    public function addHeader(string $header_name, string $header_value):AbstractResponse
+    public function addHeader(string $header_name, string $header_value): AbstractResponse
     {
         $this->headers[$header_name] = $header_value;
         return $this;
@@ -76,7 +76,7 @@ abstract class AbstractResponse
      * @param null $body - optional, see AbstractResponse::setBody()
      * @return AbstractResponse
      */
-    public function send(string $status_code = null, $body = null):AbstractResponse
+    public function send(string $status_code = null, $body = null): AbstractResponse
     {
         if ($body !== null) {
 
@@ -98,7 +98,7 @@ abstract class AbstractResponse
 
         $this->sendHeaders();
 
-        echo $body;
+        echo $this->body;
 
         return $this;
     }
@@ -107,7 +107,7 @@ abstract class AbstractResponse
      * Sends HTTP response headers.
      * @return AbstractResponse
      */
-    protected function sendHeaders():AbstractResponse
+    protected function sendHeaders(): AbstractResponse
     {
         if (empty($this->contentMimeType)) {
 
@@ -134,7 +134,7 @@ abstract class AbstractResponse
      * @param mixed $body - HTTP response body.
      * @return AbstractResponse
      */
-    abstract public function setBody($body):AbstractResponse;
+    abstract public function setBody($body): AbstractResponse;
 
     /**
      * Sets HTTP response status code. Response status code will be defaulting to "200 OK" if not overwritten using this
@@ -145,7 +145,7 @@ abstract class AbstractResponse
      * ("206 Partial Content").
      * @return AbstractResponse
      */
-    public function setStatusCode(string $status_code):AbstractResponse
+    public function setStatusCode(string $status_code): AbstractResponse
     {
         $this->statusCode = $status_code;
         return $this;
