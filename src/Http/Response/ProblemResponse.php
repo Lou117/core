@@ -32,7 +32,7 @@ class ProblemResponse extends AbstractResponse
      */
     public function setBody($body): AbstractResponse
     {
-        if ($body instanceof Problem) {
+        if (!($body instanceof Problem)) {
 
             $type = gettype($body);
             $type = $type == 'object' ? get_class($body) : $type;
