@@ -8,6 +8,7 @@
     use Lou117\Core\Module\ModuleMetadata;
     use Lou117\Core\Module\AbstractModule;
     use Lou117\Core\Http\Response\TextResponse;
+    use Lou117\Core\Http\Response\ProblemResponse;
     use Lou117\Core\Http\Response\AbstractResponse;
     use Lou117\Core\Exception\SettingsNotFoundException;
 
@@ -143,7 +144,8 @@
 
             } catch (Exception $e) {
 
-                self::$response->send(AbstractResponse::HTTP_500, new Problem($e));
+                $response = new ProblemResponse();
+                $response->send(AbstractResponse::HTTP_500, new Problem($e));
 
             }
 
