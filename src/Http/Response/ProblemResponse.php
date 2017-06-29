@@ -44,7 +44,7 @@ class ProblemResponse extends AbstractResponse
         $body->title = substr($this->statusCode, 4);
 
         $this->body = json_encode($body);
-        if ($body === null) {
+        if ($this->body === null) {
 
             $error = json_last_error_msg();
             throw new RuntimeException("JSON encoding has failed ({$error})");
