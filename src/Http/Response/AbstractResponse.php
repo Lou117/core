@@ -78,6 +78,12 @@ abstract class AbstractResponse
      */
     public function send(string $status_code = null, $body = null): AbstractResponse
     {
+        if (!empty($status_code)) {
+
+            $this->setStatusCode($status_code);
+
+        }
+
         if ($body !== null) {
 
             $this->setBody($body);
@@ -87,12 +93,6 @@ abstract class AbstractResponse
         if (headers_sent()) {
 
             echo $this->body;
-
-        }
-
-        if (!empty($status_code)) {
-
-            $this->setStatusCode($status_code);
 
         }
 
