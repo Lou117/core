@@ -78,7 +78,7 @@
 
                 } else {
 
-                    $this->detail = 'Server error (debug info disabled)';
+                    $this->detail = 'Internal server error';
 
                 }
 
