@@ -118,9 +118,9 @@ abstract class AbstractResponse
         $this->headers[self::HTTP_HEADER_CONTENT_TYPE] = $this->contentMimeType;
 
         header(self::HTTP_PROTOCOL . ' ' . $this->statusCode);
-        foreach ($this->headers as $header) {
+        foreach ($this->headers as $header_name => $header_value) {
 
-            header($header);
+            header($header_name.': '.$header_value);
 
         }
 
