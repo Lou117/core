@@ -158,7 +158,7 @@
          * @return Route|bool - returns FALSE if no result was found for route (404) or if a route was found but HTTP
          * method is not allowed (405). In both cases, Core::$response property will be updated accordingly.
          */
-        protected static function dispatch():Route
+        protected static function dispatch()
         {
             $function = 'FastRoute\simpleDispatcher';
             $params = array();
