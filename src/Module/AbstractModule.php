@@ -1,8 +1,9 @@
 <?php
-    namespace Lou117\Core;
+    namespace Lou117\Core\Module;
 
+    use Lou117\Core\Route;
     use Lou117\Core\Http\Request;
-    use Lou117\Core\Http\Response;
+    use Lou117\Core\Http\Response\AbstractResponse;
 
     abstract class AbstractModule
     {
@@ -11,12 +12,6 @@
          * @var Request
          */
         public $request;
-
-        /**
-         * HTTP response.
-         * @var Response
-         */
-        public $response;
 
         /**
          * Route configuration.
@@ -28,21 +23,17 @@
         /**
          * AbstractModule constructor.
          * @param Request $request - Request built by Core.
-         * @param Response $response - Response built by Core.
          * @param Route $route - Matched route configuration.
          */
-        final public function __construct(Request $request, Response $response, Route $route)
+        final public function __construct(Request $request, Route $route)
         {
             $this->route = $route;
             $this->request = $request;
-            $this->response = $response;
-
-            $this->run();
         }
 
         /**
          * Runs module logic. This method is called by AbstractModule constructor.
-         * @return mixed
+         * @return AbstractResponse
          */
-        abstract public function run();
+        abstract public function run(): AbstractResponse;
     }

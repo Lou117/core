@@ -1,6 +1,8 @@
 <?php
     namespace Lou117\Core;
 
+    use Lou117\Core\Module\ModuleMetadata;
+
     class Route
     {
         /**
@@ -19,7 +21,7 @@
         public $fullname;
 
         /**
-         * @var Module
+         * @var ModuleMetadata
          */
         public $module;
 

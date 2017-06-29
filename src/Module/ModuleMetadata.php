@@ -6,9 +6,9 @@
      * Time: 01:21
      */
 
-    namespace Lou117\Core;
+    namespace Lou117\Core\Module;
 
-    class Module
+    class ModuleMetadata
     {
         /**
          * @var string

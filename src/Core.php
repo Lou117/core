@@ -4,9 +4,11 @@
     use \Exception;
     use \FastRoute;
     use Lou117\Core\Http\Request;
-    use Lou117\Core\Http\Response;
-    use Lou117\Core\Exchange\Problem;
     use Composer\Autoload\ClassLoader;
+    use Lou117\Core\Module\ModuleMetadata;
+    use Lou117\Core\Module\AbstractModule;
+    use Lou117\Core\Http\Response\TextResponse;
+    use Lou117\Core\Http\Response\AbstractResponse;
     use Lou117\Core\Exception\SettingsNotFoundException;
 
     class Core
@@ -29,16 +31,21 @@
         protected static $request;
 
         /**
-         * HTTP response.
-         * @var Response
+         * Core own HTTP response.
+         * @var TextResponse
          */
         protected static $response;
+
+        /**
+         * @var FastRoute\Dispatcher
+         */
+        public static $router;
 
         /**
          * Routing table.
          * @var [Route]
          */
-        public static $routes;
+        protected static $routes;
 
         /**
          * API global settings.
@@ -63,7 +70,7 @@
          */
         public static function boot(string $application_directory, ClassLoader $composer_loader)
         {
-            self::$response = new Response();
+            self::$response = new TextResponse();
             self::$composerLoader = $composer_loader;
 
             try {
@@ -101,45 +108,53 @@
                 $parsingResult = self::$request->parseRequestBody();
                 if ($parsingResult === Request::PARSE_405) {
 
-                    // Will die()
-                    self::$response->send(Response::HTTP_405);
+                    self::$response->send(AbstractResponse::HTTP_405);
+                    return;
 
                 }
 
                 if ($parsingResult === Request::PARSE_415) {
 
-                    // Will die()
-                    self::$response->send(Response::HTTP_415);
+                    self::$response->send(AbstractResponse::HTTP_415);
+                    return;
 
                 }
 
-
-
-                /* Routing */
-
+                // Routing
                 $route = self::dispatch();
+                if (!($route instanceof Route)) {
 
-                /**/
+                    self::$response->send();
+                    return;
 
-
+                }
 
                 session_start();
 
                 $moduleClass = $route->module->composerNamespace.'Module';
-                new $moduleClass(self::$request, self::$response, $route);
+
+                /**
+                 * @var $module AbstractModule
+                 */
+                $module = new $moduleClass(self::$request, $route);
+
+                $response = $module->run();
+                $response->send();
 
             } catch (Exception $e) {
 
-                // Will die()
-                self::$response->send(Response::HTTP_500, new Problem($e));
+                self::$response->send(AbstractResponse::HTTP_500, new Problem($e));
 
             }
+
+            return;
         }
 
         /**
          * Initializes and run FastRoute router. By default, Core will use FastRoute\simpleDispatcher function, but if
          * cache/ directory exists and is writable, FastRoute\cachedDispatcher will be preferred.
-         * @return Route
+         * @return Route|bool - returns FALSE if no result was found for route (404) or if a route was found but HTTP
+         * method is not allowed (405). In both cases, Core::$response property will be updated accordingly.
          */
         protected static function dispatch():Route
         {
@@ -166,7 +181,7 @@
             /**
              * @var FastRoute\Dispatcher $dispatcher
              */
-            $dispatcher = $function(function(FastRoute\RouteCollector $r) use ($routes) {
+            self::$router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
 
                 foreach ($routes as $routeObject) {
 
@@ -176,11 +191,11 @@
 
             }, $params);
 
-            $routeInfo = $dispatcher->dispatch(self::$request->method, self::$request->uri);
+            $routeInfo = self::$router->dispatch(self::$request->method, self::$request->uri);
             if ($routeInfo[0] === FastRoute\Dispatcher::NOT_FOUND) {
 
-                // Will die()
-                self::$response->send(Response::HTTP_404);
+                self::$response->setStatusCode(AbstractResponse::HTTP_404);
+                return false;
 
             }
 
@@ -188,8 +203,9 @@
 
                 $allowedMethodsAsString = implode(', ', $routeInfo[1]);
 
-                // Will die()
-                self::$response->send(Response::HTTP_405, null, ["Allow: {$allowedMethodsAsString}"]);
+                self::$response->addHeader(AbstractResponse::HTTP_HEADER_ALLOW, $allowedMethodsAsString);
+                self::$response->setStatusCode(AbstractResponse::HTTP_405);
+                return false;
 
             }
 
@@ -253,7 +269,7 @@
 
                 $moduleConfig = array_replace_recursive($default, $moduleConfig);
 
-                $module = new Module();
+                $module = new ModuleMetadata();
                 $module->name = $moduleName;
                 $module->routes = $moduleConfig['routes'];
                 $module->composerPath = $moduleConfig['composer']['path'];
@@ -283,11 +299,11 @@
 
         /**
          * Loads module routes, adding them to internal routing table.
-         * @param Module $module - Module configuration.
+         * @param ModuleMetadata $module - Module configuration.
          * @param array $routes - Module routes.
          * @return bool
          */
-        protected static function loadRoutes(Module $module, array $routes) {
+        protected static function loadRoutes(ModuleMetadata $module, array $routes) {
 
             $default = [
                 'allowedMethods' => [],
