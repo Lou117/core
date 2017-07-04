@@ -32,7 +32,7 @@
         }
 
         /**
-         * Runs module logic. This method is called by AbstractModule constructor.
+         * Runs module logic.
          * @return AbstractResponse
          */
         abstract public function run(): AbstractResponse;

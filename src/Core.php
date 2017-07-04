@@ -2,11 +2,14 @@
     namespace Lou117\Core;
 
     use \Exception;
-    use \FastRoute;
+    use FastRoute;
+    use Monolog\Logger;
+    use \LogicException;
     use Lou117\Core\Http\Request;
     use Composer\Autoload\ClassLoader;
     use Lou117\Core\Module\ModuleMetadata;
     use Lou117\Core\Module\AbstractModule;
+    use Monolog\Handler\RotatingFileHandler;
     use Lou117\Core\Http\Response\TextResponse;
     use Lou117\Core\Http\Response\ProblemResponse;
     use Lou117\Core\Http\Response\AbstractResponse;
@@ -18,12 +21,22 @@
          * Application root directory path.
          * @var string
          */
-        public static $applicationDirectory;
+        protected static $applicationDirectory;
+
+        /**
+         * @var bool
+         */
+        protected static $booted = false;
 
         /**
          * @var ClassLoader
          */
         protected static $composerLoader;
+
+        /**
+         * @var
+         */
+        protected static $logger;
 
         /**
          * HTTP request.
@@ -40,7 +53,7 @@
         /**
          * @var FastRoute\Dispatcher
          */
-        public static $router;
+        protected static $router;
 
         /**
          * Routing table.
@@ -49,10 +62,10 @@
         protected static $routes;
 
         /**
-         * API global settings.
+         * Core global settings.
          * @var array
          */
-        public static $settings;
+        protected static $settings;
 
 
         protected function __construct(){}
@@ -71,6 +84,12 @@
          */
         public static function boot(string $application_directory, ClassLoader $composer_loader)
         {
+            if (self::$booted) {
+
+                throw new LogicException('Core::boot method cannot be called twice');
+
+            }
+
             self::$response = new TextResponse();
             self::$composerLoader = $composer_loader;
 
@@ -87,9 +106,21 @@
 
                 /* Settings processing */
 
-                self::getSettings();
+                self::fetchSettings();
+
+
+
+                /* Logger initialization */
+
+                self::$logger = new Logger(self::$settings['logChannel']);
+                self::$logger->pushHandler(new RotatingFileHandler(self::$applicationDirectory.'log/core', 10));
+
+
+                /* Debug mode */
+
                 if (array_key_exists('debugMode', self::$settings) && self::$settings['debugMode'] != false) {
 
+                    self::$logger->info('Debug mode activated');
                     Problem::$debugMode = true;
 
                 }
@@ -143,6 +174,8 @@
                 $response->send();
 
             } catch (Exception $e) {
+
+                self::$logger->critical($e->getMessage());
 
                 $response = new ProblemResponse();
                 $response->send(AbstractResponse::HTTP_500, new Problem($e));
@@ -218,10 +251,10 @@
         }
 
         /**
-         * Retrieves and computes API settings file, storing found data on Core::$settings property.
+         * Fetches Core settings file.
          * @return bool
          */
-        protected static function getSettings():bool
+        protected static function fetchSettings()
         {
             $settings = self::getConfigFile('settings');
             if (empty($settings)) {
@@ -236,11 +269,20 @@
         }
 
         /**
+         * Returns path to application's DocumentRoot.
+         * @return string
+         */
+        public static function getApplicationDirectory()
+        {
+            return self::$applicationDirectory;
+        }
+
+        /**
          * Searches for local configuration file, returning its content.
          * @param string $type - 'settings' or 'routes'.
          * @return array
          */
-        protected static function getConfigFile(string $type):array
+        protected static function getConfigFile(string $type): array
         {
             $localFilePath = self::$applicationDirectory."config/{$type}.php";
             if (!file_exists($localFilePath)) {
@@ -254,17 +296,42 @@
         }
 
         /**
+         * Returns Monolog logger.
+         * @return Monolog\Logger
+         */
+        public static function getLogger()
+        {
+            return self::$logger;
+        }
+
+        /**
+         * Returns Core router.
+         * @return FastRoute\Dispatcher
+         */
+        public static function getRouter()
+        {
+            return self::$router;
+        }
+
+        /**
+         * Returns Core settings.
+         * @return array
+         */
+        public static function getSettings(): array
+        {
+            return self::$settings;
+        }
+
+        /**
          * Loads modules declared by settings file, adding them to Composer and loading their routes (if any).
          * @return bool
          */
-        protected static function loadModules():bool
+        protected static function loadModules(): bool
         {
             $default = [
-                'composer' => [
-                    'namespace' => null,
-                    'path' => null
-                ],
-                'routes' => null
+                "namespace" => null,
+                "path" => null,
+                "routes" => null
             ];
 
             foreach (self::$settings['modules'] as $moduleName => $moduleConfig) {
@@ -274,8 +341,8 @@
                 $module = new ModuleMetadata();
                 $module->name = $moduleName;
                 $module->routes = $moduleConfig['routes'];
-                $module->composerPath = $moduleConfig['composer']['path'];
-                $module->composerNamespace = $moduleConfig['composer']['namespace'];
+                $module->composerPath = $moduleConfig['path'];
+                $module->composerNamespace = $moduleConfig['namespace'];
 
                 if (!empty($module->composerNamespace) && !empty($module->composerPath)) {
 
@@ -320,7 +387,7 @@
                 $route->name = $routeName;
                 $route->module = $module;
                 $route->endpoint = $routeConfig['endpoint'];
-                $route->fullname = $module->name.$route->name;
+                $route->fullname = $module->name.'.'.$route->name;
                 $route->allowedMethods = $routeConfig['allowedMethods'];
 
                 self::$routes[$route->fullname] = $route;

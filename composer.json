@@ -1,7 +1,8 @@
 {
     "name": "lou117/core",
     "require": {
-        "nikic/fast-route": "1.*"
+        "nikic/fast-route": "1.*",
+        "monolog/monolog": "1.*"
     },
     "autoload": {
         "psr-4": {
