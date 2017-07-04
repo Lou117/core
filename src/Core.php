@@ -175,7 +175,11 @@
 
             } catch (Exception $e) {
 
-                self::$logger->critical($e->getMessage());
+                if (self::$logger instanceof Logger) {
+
+                    self::$logger->critical($e->getMessage());
+
+                }
 
                 $response = new ProblemResponse();
                 $response->send(AbstractResponse::HTTP_500, new Problem($e));
