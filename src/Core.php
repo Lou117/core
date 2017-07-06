@@ -1,28 +1,26 @@
 <?php
     namespace Lou117\Core;
 
-    use \Exception;
     use FastRoute;
+    use \Exception;
+
+
     use Monolog\Logger;
     use \LogicException;
     use Lou117\Core\Http\Request;
     use Composer\Autoload\ClassLoader;
     use Lou117\Core\Module\ModuleMetadata;
     use Lou117\Core\Module\AbstractModule;
+    use Lou117\Core\Service\RouterProvider;
     use Monolog\Handler\RotatingFileHandler;
+    use Lou117\Core\Service\SettingsProvider;
     use Lou117\Core\Http\Response\TextResponse;
     use Lou117\Core\Http\Response\ProblemResponse;
     use Lou117\Core\Http\Response\AbstractResponse;
-    use Lou117\Core\Exception\SettingsNotFoundException;
+    use Lou117\Core\Service\AbstractServiceProvider;
 
     class Core
     {
-        /**
-         * Application root directory path.
-         * @var string
-         */
-        protected static $applicationDirectory;
-
         /**
          * @var bool
          */
@@ -32,11 +30,6 @@
          * @var ClassLoader
          */
         protected static $composerLoader;
-
-        /**
-         * @var
-         */
-        protected static $logger;
 
         /**
          * HTTP request.
@@ -51,21 +44,15 @@
         protected static $response;
 
         /**
-         * @var FastRoute\Dispatcher
-         */
-        protected static $router;
-
-        /**
          * Routing table.
          * @var [Route]
          */
         protected static $routes;
 
         /**
-         * Core global settings.
          * @var array
          */
-        protected static $settings;
+        protected static $services;
 
 
         protected function __construct(){}
@@ -82,7 +69,7 @@
          * needed files (mainly settings) and FastRoute cache writing.
          * @param ClassLoader $composer_loader - Composer loader to be use for registering modules at runtime.
          */
-        public static function boot(string $application_directory, ClassLoader $composer_loader)
+        public static function boot(ClassLoader $composer_loader)
         {
             if (self::$booted) {
 
@@ -95,39 +82,16 @@
 
             try {
 
-                self::$applicationDirectory = $application_directory;
-                if (substr(self::$applicationDirectory, -1, 1) !== '/') {
+                self::setService('core.settings', new SettingsProvider(self::$services));
+                self::setService('core.logger', new LoggerProvider(self::$services));
 
-                    self::$applicationDirectory .= '/';
+                // Debug mode
+                $settings = self::$services['core.settings'];
+                if (array_key_exists('debugMode', $settings) && $settings != false) {
 
-                }
-
-
-
-                /* Settings processing */
-
-                self::fetchSettings();
-
-
-
-                /* Logger initialization */
-
-                self::$logger = new Logger(self::$settings['logChannel']);
-                self::$logger->pushHandler(new RotatingFileHandler(self::$applicationDirectory.'log/core', 10));
-
-
-                /* Debug mode */
-
-                if (array_key_exists('debugMode', self::$settings) && self::$settings['debugMode'] != false) {
-
-                    self::$logger->info('Debug mode activated');
                     Problem::$debugMode = true;
 
                 }
-
-
-
-                /* Modules loading */
 
                 self::loadModules();
 
@@ -175,9 +139,9 @@
 
             } catch (Exception $e) {
 
-                if (self::$logger instanceof Logger) {
+                if (self::getService('core.logger') instanceof Logger) {
 
-                    self::$logger->critical($e->getMessage());
+                    self::getService('core.logger')->critical($e->getMessage());
 
                 }
 
@@ -192,6 +156,7 @@
         /**
          * Initializes and run FastRoute router. By default, Core will use FastRoute\simpleDispatcher function, but if
          * cache/ directory exists and is writable, FastRoute\cachedDispatcher will be preferred.
+         * FastRoute router is registered as a service providing FastRoute functions to third parties.
          * @return Route|bool - returns FALSE if no result was found for route (404) or if a route was found but HTTP
          * method is not allowed (405). In both cases, Core::$response property will be updated accordingly.
          */
@@ -200,11 +165,11 @@
             $function = 'FastRoute\simpleDispatcher';
             $params = array();
 
-            $cacheDir = self::$applicationDirectory.'cache';
+            $cacheDir = 'cache';
             $cacheFile = $cacheDir.'/fastroute';
             if (is_dir($cacheDir) && is_writable($cacheDir)) {
 
-                if (!file_exists($cacheFile) || is_writable($cacheDir.'cache/fastroute')) {
+                if (!file_exists($cacheFile) || is_writable($cacheFile)) {
 
                     $function = 'FastRoute\cachedDispatcher';
                     $params = [
@@ -220,7 +185,7 @@
             /**
              * @var FastRoute\Dispatcher $dispatcher
              */
-            self::$router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
+            $router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
 
                 foreach ($routes as $routeObject) {
 
@@ -230,7 +195,7 @@
 
             }, $params);
 
-            $routeInfo = self::$router->dispatch(self::$request->method, self::$request->uri);
+            $routeInfo = $router->dispatch(self::$request->method, self::$request->uri);
             if ($routeInfo[0] === FastRoute\Dispatcher::NOT_FOUND) {
 
                 self::$response->setStatusCode(AbstractResponse::HTTP_404);
@@ -248,6 +213,11 @@
 
             }
 
+            $routerProvider = new RouterProvider(self::$services);
+            $routerProvider->set($router);
+
+            self::setService('core.router', $routerProvider);
+
             $route = self::$routes[$routeInfo[1]];
             $route->uriData = $routeInfo[2];
 
@@ -255,75 +225,20 @@
         }
 
         /**
-         * Fetches Core settings file.
-         * @return bool
+         * Returns service by service name.
+         * @param string $service_name
+         * @return mixed
+         * @throws Exception - when no service is found with given name.
          */
-        protected static function fetchSettings()
+        public static function getService(string $service_name)
         {
-            $settings = self::getConfigFile('settings');
-            if (empty($settings)) {
+            if (array_key_exists($service_name, self::$services)) {
 
-                throw new SettingsNotFoundException();
+                return self::$services[$service_name]->get();
 
             }
 
-            self::$settings = $settings;
-
-            return true;
-        }
-
-        /**
-         * Returns path to application's DocumentRoot.
-         * @return string
-         */
-        public static function getApplicationDirectory()
-        {
-            return self::$applicationDirectory;
-        }
-
-        /**
-         * Searches for local configuration file, returning its content.
-         * @param string $type - 'settings' or 'routes'.
-         * @return array
-         */
-        protected static function getConfigFile(string $type): array
-        {
-            $localFilePath = self::$applicationDirectory."config/{$type}.php";
-            if (!file_exists($localFilePath)) {
-
-                return array();
-
-            }
-
-            $localSettings = require($localFilePath);
-            return is_array($localSettings) ? $localSettings : [];
-        }
-
-        /**
-         * Returns Monolog logger.
-         * @return Monolog\Logger
-         */
-        public static function getLogger()
-        {
-            return self::$logger;
-        }
-
-        /**
-         * Returns Core router.
-         * @return FastRoute\Dispatcher
-         */
-        public static function getRouter()
-        {
-            return self::$router;
-        }
-
-        /**
-         * Returns Core settings.
-         * @return array
-         */
-        public static function getSettings(): array
-        {
-            return self::$settings;
+            throw new Exception("Unknown service {$service_name}");
         }
 
         /**
@@ -335,10 +250,11 @@
             $default = [
                 "namespace" => null,
                 "path" => null,
-                "routes" => null
+                "routes" => null,
+                "services" => []
             ];
 
-            foreach (self::$settings['modules'] as $moduleName => $moduleConfig) {
+            foreach (self::$services['core.settings']['modules'] as $moduleName => $moduleConfig) {
 
                 $moduleConfig = array_replace_recursive($default, $moduleConfig);
 
@@ -350,16 +266,26 @@
 
                 if (!empty($module->composerNamespace) && !empty($module->composerPath)) {
 
-                    self::$composerLoader->addPsr4($module->composerNamespace, self::$applicationDirectory.$module->composerPath);
+                    self::$composerLoader->addPsr4($module->composerNamespace, getcwd().$module->composerPath);
 
                 }
 
-                if (!empty($module->routes) && file_exists(self::$applicationDirectory.$module->routes)) {
+                if (!empty($module->routes) && file_exists(getcwd().$module->routes)) {
 
-                    $moduleRoutes = require(self::$applicationDirectory.$module->routes);
+                    $moduleRoutes = require(getcwd().$module->routes);
                     if (is_array($moduleRoutes)) {
 
                         self::loadRoutes($module, $moduleRoutes);
+
+                    }
+
+                }
+
+                if (is_array($moduleConfig['services'])) {
+
+                    foreach ($moduleConfig['services'] as $service_name => $service_provider) {
+
+                        self::setService($service_name, new $service_provider(self::$services));
 
                     }
 
@@ -400,5 +326,24 @@
 
             return true;
 
+        }
+
+        /**
+         * Registers a new service provider under given service name.
+         * @param string $service_name - service name used by third parties as an identifier.
+         * @param AbstractServiceProvider $service_provider
+         * @return bool
+         * @throws Exception - when a service is already registered using given name.
+         */
+        protected static function setService(string $service_name, AbstractServiceProvider $service_provider): bool
+        {
+            if (array_key_exists($service_name, self::$services)) {
+
+                throw new Exception("Service name conflict ({$service_name})");
+
+            }
+
+            self::$services[$service_name] = $service_provider;
+            return true;
         }
     }
