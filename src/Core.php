@@ -264,15 +264,16 @@
                 $module->composerPath = $moduleConfig['path'];
                 $module->composerNamespace = $moduleConfig['namespace'];
 
+                $cwd = getcwd().'/';
                 if (!empty($module->composerNamespace) && !empty($module->composerPath)) {
 
-                    self::$composerLoader->addPsr4($module->composerNamespace, getcwd().$module->composerPath);
+                    self::$composerLoader->addPsr4($module->composerNamespace, $cwd.$module->composerPath);
 
                 }
 
-                if (!empty($module->routes) && file_exists(getcwd().$module->routes)) {
+                if (!empty($module->routes) && file_exists($cwd.$module->routes)) {
 
-                    $moduleRoutes = require(getcwd().$module->routes);
+                    $moduleRoutes = require($cwd.$module->routes);
                     if (is_array($moduleRoutes)) {
 
                         self::loadRoutes($module, $moduleRoutes);
