@@ -253,7 +253,8 @@
                 "services" => []
             ];
 
-            foreach (self::$services['core.settings']['modules'] as $moduleName => $moduleConfig) {
+            $settings = self::getService('core.settings');
+            foreach ($settings['modules'] as $moduleName => $moduleConfig) {
 
                 $moduleConfig = array_replace_recursive($default, $moduleConfig);
 
