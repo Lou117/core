@@ -20,10 +20,12 @@ class LoggerProvider extends AbstractServiceProvider
 
     public function __construct(array $services)
     {
-        $this->logger = new Logger($services['core.settings']['logChannel']);
-        $this->logger->pushHandler(new RotatingFileHandler($services['core.applicationDirectory'] . 'log/core', 10));
+        $settings = $services['core.settings']->get();
 
-        if ($services['core.settings']['debugMode']) {
+        $this->logger = new Logger($settings['logChannel']);
+        $this->logger->pushHandler(new RotatingFileHandler('log/core', 10));
+
+        if ($settings['debugMode']) {
 
             $this->logger->info('Debug mode activated');
 
