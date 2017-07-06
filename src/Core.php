@@ -10,6 +10,7 @@
     use Lou117\Core\Module\ModuleMetadata;
     use Lou117\Core\Module\AbstractModule;
     use Lou117\Core\Service\RouterProvider;
+    use Lou117\Core\Service\LoggerProvider;
     use Monolog\Handler\RotatingFileHandler;
     use Lou117\Core\Service\SettingsProvider;
     use Lou117\Core\Http\Response\TextResponse;
