@@ -3,8 +3,6 @@
 
     use FastRoute;
     use \Exception;
-
-
     use Monolog\Logger;
     use \LogicException;
     use Lou117\Core\Http\Request;
@@ -52,7 +50,7 @@
         /**
          * @var array
          */
-        protected static $services;
+        protected static $services = [];
 
 
         protected function __construct(){}
