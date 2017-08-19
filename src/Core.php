@@ -283,6 +283,8 @@
 
                 }
 
+                self::$modules[] = $module;
+
             }
 
             self::loadRoutes();
