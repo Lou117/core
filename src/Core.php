@@ -79,9 +79,10 @@
             self::$response = new TextResponse();
             self::$composerLoader = $composer_loader;
 
+            self::setService('core.settings', new SettingsProvider(self::$services));
+
             try {
 
-                self::setService('core.settings', new SettingsProvider(self::$services));
                 self::setService('core.logger', new LoggerProvider(self::$services));
 
                 // Debug mode
