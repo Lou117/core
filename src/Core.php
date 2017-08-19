@@ -138,7 +138,7 @@
 
             } catch (Exception $e) {
 
-                if (self::getService('core.logger') instanceof Logger) {
+                if (self::hasService('core.logger')) {
 
                     self::getService('core.logger')->critical($e->getMessage());
 
@@ -221,6 +221,16 @@
             $route->uriData = $routeInfo[2];
 
             return $route;
+        }
+
+        /**
+         * Returns TRUE when a service exists under given service name, FALSE otherwise.
+         * @param string $service_name
+         * @return bool
+         */
+        public static function hasService(string $service_name): bool
+        {
+            return array_key_exists($service_name, self::$services);
         }
 
         /**
