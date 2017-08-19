@@ -20,7 +20,6 @@
 
     class Core
     {
-        const MODULES_CACHE_FILEPATH = 'cache/module';
         const ROUTES_CACHE_FILEPATH = 'cache/routes';
 
 
@@ -35,6 +34,11 @@
         protected static $composerLoader;
 
         /**
+         * @var ModuleMetadata[]
+         */
+        protected static $modules;
+
+        /**
          * HTTP request.
          * @var Request
          */
@@ -42,7 +46,7 @@
 
         /**
          * Routing table.
-         * @var [Route]
+         * @var Route[]
          */
         protected static $routes;
 
@@ -269,17 +273,6 @@
 
                 }
 
-                if (!empty($module->routes) && file_exists($module->routes)) {
-
-                    $moduleRoutes = require($module->routes);
-                    if (is_array($moduleRoutes)) {
-
-                        self::loadRoutes($module, $moduleRoutes);
-
-                    }
-
-                }
-
                 if (is_array($moduleConfig['services'])) {
 
                     foreach ($moduleConfig['services'] as $service_name => $service_provider) {
@@ -292,39 +285,59 @@
 
             }
 
+            self::loadRoutes();
+
             return true;
         }
 
         /**
-         * Loads module routes, adding them to internal routing table.
-         * @param ModuleMetadata $module - Module configuration.
-         * @param array $routes - Module routes.
+         * Loads module routes from, adding them to internal routing table and caching it if necessary.
          * @return bool
          */
-        protected static function loadRoutes(ModuleMetadata $module, array $routes) {
+        protected static function loadRoutes()
+        {
+            if (file_exists(self::ROUTES_CACHE_FILEPATH)) {
 
-            $default = [
-                'allowedMethods' => [],
-                'endpoint' => ''
-            ];
-
-            foreach ($routes as $routeName => $routeConfig) {
-
-                $routeConfig = array_replace_recursive($default, $routeConfig);
-
-                $route = new Route();
-                $route->name = $routeName;
-                $route->module = $module;
-                $route->endpoint = $routeConfig['endpoint'];
-                $route->fullname = $module->name.'.'.$route->name;
-                $route->allowedMethods = $routeConfig['allowedMethods'];
-
-                self::$routes[$route->fullname] = $route;
+                self::$routes = unserialize(file_get_contents(self::ROUTES_CACHE_FILEPATH));
 
             }
 
-            return true;
+            foreach (self::$modules as $module) {
 
+                if (!empty($module->routes) && file_exists($module->routes)) {
+
+                    $moduleRoutes = require($module->routes);
+                    if (is_array($moduleRoutes)) {
+
+                        $default = [
+                            'allowedMethods' => [],
+                            'endpoint' => ''
+                        ];
+
+                        foreach ($moduleRoutes as $routeName => $routeConfig) {
+
+                            $routeConfig = array_replace_recursive($default, $routeConfig);
+
+                            $route = new Route();
+                            $route->name = $routeName;
+                            $route->module = $module;
+                            $route->endpoint = $routeConfig['endpoint'];
+                            $route->fullname = $module->name.'.'.$route->name;
+                            $route->allowedMethods = $routeConfig['allowedMethods'];
+
+                            self::$routes[$route->fullname] = $route;
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            file_put_contents(self::ROUTES_CACHE_FILEPATH, serialize(self::$routes));
+
+            return true;
         }
 
         /**
