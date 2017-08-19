@@ -35,7 +35,7 @@ class JsonResponse extends AbstractResponse
 
         }
 
-        $this->body = json_encode($body, JSON_PRETTY_PRINT);
+        $this->body = json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if ($body === null) {
 
             $error = json_last_error_msg();

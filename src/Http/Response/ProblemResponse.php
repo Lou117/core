@@ -43,7 +43,7 @@ class ProblemResponse extends AbstractResponse
         $body->status = $this->statusCode;
         $body->title = substr($this->statusCode, 4);
 
-        $this->body = json_encode($body, JSON_PRETTY_PRINT);
+        $this->body = json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if ($this->body === null) {
 
             $error = json_last_error_msg();
