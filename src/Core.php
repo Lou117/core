@@ -94,7 +94,10 @@
 
                 }
 
+                $start = microtime(true);
                 self::loadModules();
+                $time = round(microtime(true) - $start, 5);
+                self::getService('core.logger')->info('Modules loading took '.$time.'s');
 
 
 
