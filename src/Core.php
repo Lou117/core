@@ -20,6 +20,10 @@
 
     class Core
     {
+        const MODULES_CACHE_FILEPATH = 'cache/module';
+        const ROUTES_CACHE_FILEPATH = 'cache/routes';
+
+
         /**
          * @var bool
          */
@@ -35,12 +39,6 @@
          * @var Request
          */
         protected static $request;
-
-        /**
-         * Core own HTTP response.
-         * @var TextResponse
-         */
-        protected static $response;
 
         /**
          * Routing table.
@@ -76,7 +74,6 @@
 
             }
 
-            self::$response = new TextResponse();
             self::$composerLoader = $composer_loader;
 
             self::setService('core.settings', new SettingsProvider(self::$services));
@@ -102,37 +99,30 @@
                 self::$request = new Request(true);
 
                 $parsingResult = self::$request->parseRequestBody();
-                if ($parsingResult === Request::PARSE_405) {
+                if ($parsingResult instanceof ProblemResponse) {
 
-                    self::$response->send(AbstractResponse::HTTP_405);
-                    return;
-
-                }
-
-                if ($parsingResult === Request::PARSE_415) {
-
-                    self::$response->send(AbstractResponse::HTTP_415);
+                    $parsingResult->send();
                     return;
 
                 }
 
                 // Routing
-                $route = self::dispatch();
-                if (!($route instanceof Route)) {
+                $dispatchResult = self::dispatch();
+                if ($dispatchResult instanceof TextResponse) {
 
-                    self::$response->send();
+                    $dispatchResult->send();
                     return;
 
                 }
 
                 session_start();
 
-                $moduleClass = $route->module->composerNamespace.'Module';
+                $moduleClass = $dispatchResult->module->composerNamespace.'Module';
 
                 /**
                  * @var $module AbstractModule
                  */
-                $module = new $moduleClass(self::$request, $route);
+                $module = new $moduleClass(self::$request, $dispatchResult);
 
                 $response = $module->run();
                 $response->send();
@@ -157,8 +147,8 @@
          * Initializes and run FastRoute router. By default, Core will use FastRoute\simpleDispatcher function, but if
          * cache/ directory exists and is writable, FastRoute\cachedDispatcher will be preferred.
          * FastRoute router is registered as a service providing FastRoute functions to third parties.
-         * @return Route|bool - returns FALSE if no result was found for route (404) or if a route was found but HTTP
-         * method is not allowed (405). In both cases, Core::$response property will be updated accordingly.
+         * @return Route|AbstractResponse - returns an instance of TextResponse with HTTP code automatically set if no
+         * result was found for route (404) or if a route was found but HTTP method is not allowed (405).
          */
         protected static function dispatch()
         {
@@ -195,21 +185,19 @@
 
             }, $params);
 
+            $response = new TextResponse();
             $routeInfo = $router->dispatch(self::$request->method, self::$request->uri);
             if ($routeInfo[0] === FastRoute\Dispatcher::NOT_FOUND) {
 
-                self::$response->setStatusCode(AbstractResponse::HTTP_404);
-                return false;
+                return $response->setStatusCode(AbstractResponse::HTTP_404);
 
             }
 
             if ($routeInfo[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
 
                 $allowedMethodsAsString = implode(', ', $routeInfo[1]);
-
-                self::$response->addHeader(AbstractResponse::HTTP_HEADER_ALLOW, $allowedMethodsAsString);
-                self::$response->setStatusCode(AbstractResponse::HTTP_405);
-                return false;
+                $response->addHeader(AbstractResponse::HTTP_HEADER_ALLOW, $allowedMethodsAsString);
+                return $response->setStatusCode(AbstractResponse::HTTP_405);
 
             }
 

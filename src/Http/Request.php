@@ -1,20 +1,12 @@
 <?php
     namespace Lou117\Core\Http;
 
+    use Lou117\Core\Problem;
+    use Lou117\Core\Http\Response\ProblemResponse;
+    use Lou117\Core\Http\Response\AbstractResponse;
+
     class Request
     {
-        /**
-         * Returned by Request::parseRequestBody method when parsing was successful.
-         * @see Request::parseRequestBody()
-         */
-        const PARSE_200 = 200;
-
-        /**
-         * Returned by Request::parseRequestBody method when request body
-         */
-        const PARSE_405 = 405;
-        const PARSE_415 = 415;
-
         /**
          * Request body
          * @var mixed
@@ -169,14 +161,15 @@
 
         /**
          * Parse request body according to Content-Type header.
-         * @return int
+         * @return bool|ProblemResponse - returns TRUE if casting was successful, or an instance of ProblemResponse if
+         * casting failed.
          */
-        public function parseRequestBody():int
+        public function parseRequestBody()
         {
             // Nothing to cast or to cast against
             if (empty($this->body) || !array_key_exists('Content-Type', $this->headers)) {
 
-                return self::PARSE_200;
+                return true;
 
             }
 
@@ -192,9 +185,11 @@
                 $this->body = $_POST;
                 $this->files = $_FILES;
 
-                return self::PARSE_200;
+                return true;
 
             }
+
+            $response = new ProblemResponse();
 
             /*
              * Value 'multipart/form-data' (e.g. for file uploading) for Content-Type header is only supported on POST
@@ -203,33 +198,45 @@
              */
             if ($this->headers['Content-Type'] == 'multipart/form-data' && $this->method !== 'POST') {
 
-                return self::PARSE_405;
+                $response->setStatusCode(AbstractResponse::HTTP_405);
+                $response->setBody(new Problem("Value 'multipart/form-data' for Content-Type header is only supported on POST"));
+
+                return $response;
 
             }
 
             if ($this->headers['Content-Type'] === 'application/x-www-form-urlencoded') {
 
                 parse_str($this->body, $this->body);
-                return self::PARSE_200;
+                return true;
 
             }
 
-            $try = json_decode($this->body, true);
-            if ($try !== null){
+            if (strstr($this->headers['Content-Type'], 'json')) {
 
-                $this->body = $try;
-                array_walk_recursive($this->body, function(&$value){
+                $try = json_decode($this->body, true);
+                if ($try !== null){
 
-                    $value = trim($value);
+                    $this->body = $try;
+                    array_walk_recursive($this->body, function(&$value){
 
-                });
+                        $value = trim($value);
 
-                return self::PARSE_200;
+                    });
 
-            } else {
+                    return true;
 
-                return self::PARSE_415;
+                } else {
+
+                    $response->setStatusCode(AbstractResponse::HTTP_422);
+                    $response->setBody(new Problem('Invalid JSON ('.json_last_error_msg().')'));
+
+                    return $response;
+
+                }
 
             }
+
+            return true;
         }
     }

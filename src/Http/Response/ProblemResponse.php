@@ -20,7 +20,7 @@ class ProblemResponse extends AbstractResponse
     /**
      * @see AbstractResponse::$contentMimeType
      */
-    protected $contentMimeType = 'text/plain';
+    protected $contentMimeType = 'application/json';
 
     /**
      * Sets HTTP response body.
