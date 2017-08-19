@@ -304,8 +304,13 @@
             if (file_exists(self::ROUTES_CACHE_FILEPATH)) {
 
                 self::$routes = unserialize(file_get_contents(self::ROUTES_CACHE_FILEPATH));
+                self::getService('core.logger')->info('Routes loaded from cache');
+
+                return true;
 
             }
+
+            self::getService('core.logger')->info('Generating routes');
 
             foreach (self::$modules as $module) {
 
