@@ -24,6 +24,7 @@ abstract class AbstractResponse
     const HTTP_404 = '404 Not Found';
     const HTTP_405 = '405 Method Not Allowed';
     const HTTP_500 = '500 Internal Server Error';
+    const HTTP_501 = '501 Not Implemented';
     const HTTP_503 = '503 Service Unavailable';
     const HTTP_406 = '406 Not Acceptable';
     const HTTP_415 = '415 Unsupported Media Type';
