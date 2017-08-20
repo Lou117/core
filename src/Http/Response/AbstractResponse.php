@@ -54,6 +54,15 @@ abstract class AbstractResponse
     protected $statusCode = self::HTTP_200;
 
 
+    public function __construct($body = null)
+    {
+        if (!empty($body)) {
+
+            $this->setBody($body);
+
+        }
+    }
+
     /**
      * Adds an header to HTTP response.
      * @param string $header_name - name of HTTP header to add to HTTP response.
