@@ -9,5 +9,7 @@ namespace Lou117\Core\Service;
 
 abstract class AbstractServiceProvider
 {
+    public function __construct(array $services) {}
+
     abstract public function get();
 }
