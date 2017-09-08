@@ -138,7 +138,7 @@
 
                 if (self::hasService('core.logger')) {
 
-                    self::getService('core.logger')->critical($e->getMessage());
+                    self::getService('core.logger')->critical($e->getMessage(), $e->getTrace());
 
                 }
 
