@@ -94,6 +94,8 @@
 
                 }
 
+                session_start();
+
                 $start = microtime(true);
                 self::loadModules();
                 $time = round(microtime(true) - $start, 5);
@@ -121,8 +123,6 @@
                     return;
 
                 }
-
-                session_start();
 
                 $moduleClass = $dispatchResult->module->composerNamespace.'Module';
 
