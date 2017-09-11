@@ -29,4 +29,9 @@
          * @var string
          */
         public $routes;
+
+        /**
+         * @var string[]
+         */
+        public $services;
     }

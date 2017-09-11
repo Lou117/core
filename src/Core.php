@@ -94,12 +94,14 @@
 
                 }
 
-                session_start();
-
                 $start = microtime(true);
                 self::loadModules();
                 $time = round(microtime(true) - $start, 5);
                 self::getService('core.logger')->info('Modules loading took '.$time.'s');
+
+                session_start();
+
+                self::loadServicesFromModules();
 
 
 
@@ -267,22 +269,13 @@
                 $module = new ModuleMetadata();
                 $module->name = $moduleName;
                 $module->routes = $moduleConfig['routes'];
+                $module->services = $moduleConfig["services"];
                 $module->composerPath = $moduleConfig['composer']['path'];
                 $module->composerNamespace = $moduleConfig['composer']['namespace'];
 
                 if (!empty($module->composerNamespace) && !empty($module->composerPath)) {
 
                     self::$composerLoader->addPsr4($module->composerNamespace, $module->composerPath);
-
-                }
-
-                if (is_array($moduleConfig['services'])) {
-
-                    foreach ($moduleConfig['services'] as $service_name => $service_provider) {
-
-                        self::setService($service_name, new $service_provider(self::$services));
-
-                    }
 
                 }
 
@@ -299,7 +292,7 @@
          * Loads module routes from, adding them to internal routing table and caching it if necessary.
          * @return bool
          */
-        protected static function loadRoutes()
+        protected static function loadRoutes(): bool
         {
             if (file_exists(self::ROUTES_CACHE_FILEPATH)) {
 
@@ -346,6 +339,25 @@
             }
 
             file_put_contents(self::ROUTES_CACHE_FILEPATH, serialize(self::$routes));
+
+            return true;
+        }
+
+        /**
+         * Loads services declared by modules.
+         * @return bool
+         */
+        protected static function loadServicesFromModules(): bool
+        {
+            foreach (self::$modules as $moduleMetadata) {
+
+                foreach ($moduleMetadata->services as $serviceName => $serviceProvider) {
+
+                    self::setService($serviceName, new $serviceProvider(self::$services));
+
+                }
+
+            }
 
             return true;
         }
