@@ -15,6 +15,7 @@ abstract class AbstractResponse
 
     const HTTP_200 = '200 OK';
     const HTTP_201 = '201 Created';
+    const HTTP_204 = '204 No Content';
     const HTTP_301 = '301 Moved Permanently';
     const HTTP_302 = '302 Moved Temporarily';
     const HTTP_303 = '303 See Other';
