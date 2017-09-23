@@ -99,7 +99,11 @@
                 $time = round(microtime(true) - $start, 5);
                 self::getService('core.logger')->info('Modules loading took '.$time.'s');
 
-                session_start();
+                if ($settings['startSession']) {
+
+                    session_start();
+
+                }
 
                 self::loadServicesFromModules();
 
