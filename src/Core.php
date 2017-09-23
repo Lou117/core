@@ -87,7 +87,7 @@
                 self::setService('core.logger', new LoggerProvider(self::$services));
 
                 // Debug mode
-                $settings = self::$services['core.settings'];
+                $settings = self::$services['core.settings']->get();
                 if (array_key_exists('debugMode', $settings) && $settings != false) {
 
                     Problem::$debugMode = true;
