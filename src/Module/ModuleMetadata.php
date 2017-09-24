@@ -13,12 +13,7 @@
         /**
          * @var string
          */
-        public $composerNamespace;
-
-        /**
-         * @var string
-         */
-        public $composerPath;
+        public $fqcn;
 
         /**
          * @var string
@@ -28,10 +23,5 @@
         /**
          * @var string
          */
-        public $routes;
-
-        /**
-         * @var string[]
-         */
-        public $services;
+        public $namespace;
     }

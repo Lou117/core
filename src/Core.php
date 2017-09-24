@@ -9,7 +9,7 @@
     use Composer\Autoload\ClassLoader;
     use Lou117\Core\Module\ModuleMetadata;
     use Lou117\Core\Module\AbstractModule;
-    use Lou117\Core\Service\RouterProvider;
+    use Lou117\Core\Service\RoutingProvider;
     use Lou117\Core\Service\LoggerProvider;
     use Monolog\Handler\RotatingFileHandler;
     use Lou117\Core\Service\SettingsProvider;
@@ -34,21 +34,10 @@
         protected static $composerLoader;
 
         /**
-         * @var ModuleMetadata[]
-         */
-        protected static $modules;
-
-        /**
          * HTTP request.
          * @var Request
          */
         protected static $request;
-
-        /**
-         * Routing table.
-         * @var Route[]
-         */
-        protected static $routes;
 
         /**
          * @var array
@@ -86,8 +75,12 @@
 
                 self::setService('core.logger', new LoggerProvider(self::$services));
 
-                // Debug mode
-                $settings = self::$services['core.settings']->get();
+                $settings = self::getService('core.settings');
+
+                /*
+                 * "Debug mode" is ability for Problem instances to carry exceptions' message instead of a generic
+                 * "Internal Server Error" message.
+                 */
                 if (array_key_exists('debugMode', $settings) && $settings != false) {
 
                     Problem::$debugMode = true;
@@ -95,9 +88,14 @@
                 }
 
                 $start = microtime(true);
-                self::loadModules();
+                $modules = self::loadModules();
                 $time = round(microtime(true) - $start, 5);
                 self::getService('core.logger')->info('Modules loading took '.$time.'s');
+
+                $start = microtime(true);
+                self::loadRoutes($modules);
+                $time = round(microtime(true) - $start, 5);
+                self::getService('core.logger')->info('Routes loading took '.$time.'s');
 
                 if ($settings['startSession']) {
 
@@ -105,7 +103,7 @@
 
                 }
 
-                self::loadServicesFromModules();
+                self::loadServices($modules);
 
 
 
@@ -130,7 +128,7 @@
 
                 }
 
-                $moduleClass = $dispatchResult->module->composerNamespace.'Module';
+                $moduleClass = $dispatchResult->module->fqcn;
 
                 /**
                  * @var $module AbstractModule
@@ -157,49 +155,14 @@
         }
 
         /**
-         * Initializes and run FastRoute router. By default, Core will use FastRoute\simpleDispatcher function, but if
-         * cache/ directory exists and is writable, FastRoute\cachedDispatcher will be preferred.
-         * FastRoute router is registered as a service providing FastRoute functions to third parties.
+         * Run FastRoute router.
          * @return Route|AbstractResponse - returns an instance of TextResponse with HTTP code automatically set if no
          * result was found for route (404) or if a route was found but HTTP method is not allowed (405).
          */
         protected static function dispatch()
         {
-            $function = 'FastRoute\simpleDispatcher';
-            $params = array();
-
-            $cacheDir = 'cache';
-            $cacheFile = $cacheDir.'/fastroute';
-            if (is_dir($cacheDir) && is_writable($cacheDir)) {
-
-                if (!file_exists($cacheFile) || is_writable($cacheFile)) {
-
-                    $function = 'FastRoute\cachedDispatcher';
-                    $params = [
-                        'cacheFile' => $cacheFile
-                    ];
-
-                }
-
-            }
-
-            $routes = self::$routes;
-
-            /**
-             * @var FastRoute\Dispatcher $dispatcher
-             */
-            $router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
-
-                foreach ($routes as $routeObject) {
-
-                    $r->addRoute($routeObject->allowedMethods, $routeObject->endpoint, $routeObject->fullname);
-
-                }
-
-            }, $params);
-
             $response = new TextResponse();
-            $routeInfo = $router->dispatch(self::$request->method, self::$request->uri);
+            $routeInfo = self::getService('core.routing')->getRouter()->dispatch(self::$request->method, self::$request->uri);
             if ($routeInfo[0] === FastRoute\Dispatcher::NOT_FOUND) {
 
                 return $response->setStatusCode(AbstractResponse::HTTP_404);
@@ -214,12 +177,7 @@
 
             }
 
-            $routerProvider = new RouterProvider(self::$services);
-            $routerProvider->set($router);
-
-            self::setService('core.router', $routerProvider);
-
-            $route = self::$routes[$routeInfo[1]];
+            $route = self::getService('core.routing')->getRoutes()[$routeInfo[1]];
             $route->uriData = $routeInfo[2];
 
             return $route;
@@ -254,110 +212,140 @@
 
         /**
          * Loads modules declared by settings file, adding them to Composer and loading their routes (if any).
-         * @return bool
+         * @return ModuleMetadata[]
          */
-        protected static function loadModules(): bool
+        protected static function loadModules(): array
         {
             $default = [
                 "namespace" => null,
-                "path" => null,
-                "routes" => null,
-                "services" => []
+                "path" => null
             ];
 
+            $modules = [];
             $settings = self::getService('core.settings');
             foreach ($settings['modules'] as $moduleName => $moduleConfig) {
 
                 $moduleConfig = array_replace_recursive($default, $moduleConfig);
 
-                $module = new ModuleMetadata();
-                $module->name = $moduleName;
-                $module->routes = $moduleConfig['routes'];
-                $module->services = $moduleConfig["services"];
-                $module->composerPath = $moduleConfig['composer']['path'];
-                $module->composerNamespace = $moduleConfig['composer']['namespace'];
+                if (!empty($moduleConfig["namespace"]) && !empty($moduleConfig["path"])) {
 
-                if (!empty($module->composerNamespace) && !empty($module->composerPath)) {
-
-                    self::$composerLoader->addPsr4($module->composerNamespace, $module->composerPath);
+                    self::$composerLoader->addPsr4($moduleConfig["namespace"], $moduleConfig["path"]);
 
                 }
 
-                self::$modules[] = $module;
+                $moduleMetadata = new ModuleMetadata();
+                $moduleMetadata->name = $moduleName;
+                $moduleMetadata->fqcn = $moduleConfig["namespace"]."Module";
+                $moduleMetadata->namespace = $moduleConfig["namespace"];
+
+                $modules[$moduleName] = $moduleMetadata;
 
             }
 
-            self::loadRoutes();
-
-            return true;
+            return $modules;
         }
 
         /**
-         * Loads module routes from, adding them to internal routing table and caching it if necessary.
+         * Loads module routes, caching it if necessary, and set FastRoute dispatcher up.
+         * By default, Core will use FastRoute\simpleDispatcher function, but if cache/ directory exists and is
+         * writable, FastRoute\cachedDispatcher will be preferred. FastRoute router and loaded routes are registered as
+         * a service through RoutingProvider.
+         * @param ModuleMetadata[] $modules
          * @return bool
          */
-        protected static function loadRoutes(): bool
+        protected static function loadRoutes(array $modules): bool
         {
-            if (file_exists(self::ROUTES_CACHE_FILEPATH)) {
+            if (!file_exists(self::ROUTES_CACHE_FILEPATH)) {
 
-                self::$routes = unserialize(file_get_contents(self::ROUTES_CACHE_FILEPATH));
-                self::getService('core.logger')->info('Routes loaded from cache');
+                self::getService('core.logger')->info('Generating routes');
 
-                return true;
+                $defaultRoute = [
+                    "endpoint" => "",
+                    "methods" => []
+                ];
 
-            }
+                $routes = [];
+                foreach ($modules as $moduleMetadata) {
 
-            self::getService('core.logger')->info('Generating routes');
+                    $moduleRoutes = forward_static_call([$moduleMetadata->fqcn, 'getModules']);
+                    foreach ($moduleRoutes as $routeName => $routeConfig) {
 
-            foreach (self::$modules as $module) {
+                        $routeConfig = array_replace($defaultRoute, $routeConfig);
 
-                if (!empty($module->routes) && file_exists($module->routes)) {
+                        $route = new Route();
+                        $route->name = $routeName;
+                        $route->module = $moduleMetadata;
+                        $route->endpoint = $routeConfig["endpoint"];
+                        $route->fullname = $moduleMetadata->name.".".$routeName;
+                        $route->allowedMethods = $routeConfig['methods'];
 
-                    $moduleRoutes = require($module->routes);
-                    if (is_array($moduleRoutes)) {
-
-                        $default = [
-                            'allowedMethods' => [],
-                            'endpoint' => ''
-                        ];
-
-                        foreach ($moduleRoutes as $routeName => $routeConfig) {
-
-                            $routeConfig = array_replace_recursive($default, $routeConfig);
-
-                            $route = new Route();
-                            $route->name = $routeName;
-                            $route->module = $module;
-                            $route->endpoint = $routeConfig['endpoint'];
-                            $route->fullname = $module->name.'.'.$route->name;
-                            $route->allowedMethods = $routeConfig['allowedMethods'];
-
-                            self::$routes[$route->fullname] = $route;
-
-                        }
+                        $routes[$route->fullname] = $route;
 
                     }
 
                 }
 
+                file_put_contents(self::ROUTES_CACHE_FILEPATH, serialize($routes));
+
+            } else {
+
+                $routes = unserialize(file_get_contents(self::ROUTES_CACHE_FILEPATH));
+                self::getService('core.logger')->info('Routes loaded from cache');
+
             }
 
-            file_put_contents(self::ROUTES_CACHE_FILEPATH, serialize(self::$routes));
+            $function = 'FastRoute\simpleDispatcher';
+            $params = array();
+
+            $cacheDir = 'cache';
+            $cacheFile = $cacheDir.'/fastroute';
+            if (is_dir($cacheDir) && is_writable($cacheDir)) {
+
+                if (!file_exists($cacheFile) || is_writable($cacheFile)) {
+
+                    $function = 'FastRoute\cachedDispatcher';
+                    $params = [
+                        'cacheFile' => $cacheFile
+                    ];
+
+                }
+
+            }
+
+            $router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
+
+                foreach ($routes as $routeObject) {
+
+                    $r->addRoute($routeObject->allowedMethods, $routeObject->endpoint, $routeObject->fullname);
+
+                }
+
+            }, $params);
+
+            $routerProvider = new RoutingProvider(self::$services);
+            $routerProvider
+                ->setRouter($router)
+                ->setRoutes($routes);
+
+            self::setService('core.routing', $routerProvider);
 
             return true;
         }
 
         /**
          * Loads services declared by modules.
+         * @param ModuleMetadata[] $modules
          * @return bool
          */
-        protected static function loadServicesFromModules(): bool
+        protected static function loadServices(array $modules): bool
         {
-            foreach (self::$modules as $moduleMetadata) {
+            foreach ($modules as $moduleMetadata) {
 
-                foreach ($moduleMetadata->services as $serviceName => $serviceProvider) {
+                $services = forward_static_call([$moduleMetadata->fqcn, 'getServices']);
+                foreach ($services as $serviceName => $serviceProvider) {
 
-                    self::setService($serviceName, new $serviceProvider(self::$services));
+                    $serviceProviderFqcn = $moduleMetadata->namespace.$serviceProvider;
+                    self::setService($serviceName, new $serviceProviderFqcn(self::$services));
 
                 }
 
