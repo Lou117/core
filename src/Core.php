@@ -267,7 +267,7 @@
                 $routes = [];
                 foreach ($modules as $moduleMetadata) {
 
-                    $moduleRoutes = forward_static_call([$moduleMetadata->fqcn, 'getModules']);
+                    $moduleRoutes = forward_static_call([$moduleMetadata->fqcn, 'getRoutes']);
                     foreach ($moduleRoutes as $routeName => $routeConfig) {
 
                         $routeConfig = array_replace($defaultRoute, $routeConfig);
