@@ -24,6 +24,7 @@ abstract class AbstractResponse
     const HTTP_403 = '403 Forbidden';
     const HTTP_404 = '404 Not Found';
     const HTTP_405 = '405 Method Not Allowed';
+    const HTTP_409 = '409 Conflict';
     const HTTP_500 = '500 Internal Server Error';
     const HTTP_501 = '501 Not Implemented';
     const HTTP_503 = '503 Service Unavailable';
