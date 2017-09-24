@@ -43,7 +43,38 @@ class ProblemResponse extends AbstractResponse
         $body->status = $this->statusCode;
         $body->title = substr($this->statusCode, 4);
 
-        $this->body = json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $this->encode($body);
+
+        return $this;
+    }
+
+    /**
+     * @see AbstractResponse::setStatusCode()
+     * Propagates new status code to embedded body, if set.
+     */
+    public function setStatusCode(string $status_code): AbstractResponse
+    {
+        parent::setStatusCode($status_code);
+        if (!empty($this->body)) {
+
+            $body = json_decode($this->body, true);
+            $body['status'] = $this->statusCode;
+            $body['title'] = substr($this->statusCode, 4);
+            $this->encode($body);
+
+        }
+
+        return $this;
+    }
+
+    /**
+     * Encode given body to JSON.
+     * @param $new_body
+     * @return ProblemResponse
+     */
+    protected function encode($new_body): ProblemResponse
+    {
+        $this->body = json_encode($new_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if ($this->body === null) {
 
             $error = json_last_error_msg();
