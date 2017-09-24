@@ -32,6 +32,25 @@
         }
 
         /**
+         * Returns module routes.
+         * See ROUTING.md for precise documentation about how Core will handle this method return.
+         * @return array
+         */
+        public static function getRoutes(): array
+        {
+            return [];
+        }
+
+        /**
+         * Returns module services.
+         * @return array
+         */
+        public static function getServices(): array
+        {
+            return [];
+        }
+
+        /**
          * Runs module logic.
          * @return AbstractResponse
          */
