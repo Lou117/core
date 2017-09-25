@@ -217,8 +217,9 @@
         protected static function loadModules(): array
         {
             $default = [
-                "namespace" => null,
-                "path" => null
+                "composerNamespace" => null,
+                "composerPath" => null,
+                "services" => []
             ];
 
             $modules = [];
@@ -227,16 +228,23 @@
 
                 $moduleConfig = array_replace_recursive($default, $moduleConfig);
 
-                if (!empty($moduleConfig["namespace"]) && !empty($moduleConfig["path"])) {
+                if (!empty($moduleConfig["composerNamespace"]) && !empty($moduleConfig["composerPath"])) {
 
-                    self::$composerLoader->addPsr4($moduleConfig["namespace"], $moduleConfig["path"]);
+                    self::$composerLoader->addPsr4($moduleConfig["composerNamespace"], $moduleConfig["composerPath"]);
 
                 }
 
                 $moduleMetadata = new ModuleMetadata();
                 $moduleMetadata->name = $moduleName;
-                $moduleMetadata->fqcn = $moduleConfig["namespace"]."Module";
-                $moduleMetadata->namespace = $moduleConfig["namespace"];
+                $moduleMetadata->fqcn = $moduleConfig["composerNamespace"]."Module";
+                $moduleMetadata->services = [];
+                $moduleMetadata->namespace = $moduleConfig["composerNamespace"];
+
+                if (array_key_exists("services", $moduleConfig) && is_array($moduleConfig["services"])) {
+
+                    $moduleMetadata->services = $moduleConfig["services"];
+
+                }
 
                 $modules[$moduleName] = $moduleMetadata;
 
@@ -345,15 +353,10 @@
         {
             foreach ($modules as $moduleMetadata) {
 
-                if (class_exists($moduleMetadata->fqcn)) {
+                foreach ($moduleMetadata->services as $serviceName => $serviceClassname) {
 
-                    $services = forward_static_call([$moduleMetadata->fqcn, 'getServices']);
-                    foreach ($services as $serviceName => $serviceProvider) {
-
-                        $serviceProviderFqcn = $moduleMetadata->namespace.$serviceProvider;
-                        self::setService($serviceName, new $serviceProviderFqcn(self::$services));
-
-                    }
+                    $serviceProviderFqcn = $moduleMetadata->namespace.$serviceClassname;
+                    self::setService($serviceName, new $serviceProviderFqcn(self::$services));
 
                 }
 

@@ -24,4 +24,9 @@
          * @var string
          */
         public $namespace;
+
+        /**
+         * @var string[]
+         */
+        public $services;
     }

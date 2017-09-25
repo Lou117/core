@@ -42,15 +42,6 @@
         }
 
         /**
-         * Returns module services.
-         * @return array
-         */
-        public static function getServices(): array
-        {
-            return [];
-        }
-
-        /**
          * Runs module logic.
          * @return AbstractResponse
          */
