@@ -1,9 +1,5 @@
 #Core modules services
-Modules are responsible for declaring to _Core_ a list of the services they expose to other modules.
-
-For each module declared in ``config/settings.php``, _Core_ will call ``AbstractModule::getServices()`` method. This 
-method must return to _Core_ a complete list of services which belong to the module, as an associative array where keys 
-are services "names" and values are class names.
+Services can be declared for each module in `config/settings.php`, using "services" entry of module declaration.
 
 Though not mandatory, its a good practice to name services as [module-name].[service-name]. Classes identified by values 
 MUST extend `Core\AbstractServiceProvider` abstract class.
