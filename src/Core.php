@@ -267,19 +267,23 @@
                 $routes = [];
                 foreach ($modules as $moduleMetadata) {
 
-                    $moduleRoutes = forward_static_call([$moduleMetadata->fqcn, 'getRoutes']);
-                    foreach ($moduleRoutes as $routeName => $routeConfig) {
+                    if (class_exists($moduleMetadata->fqcn)) {
 
-                        $routeConfig = array_replace($defaultRoute, $routeConfig);
+                        $moduleRoutes = forward_static_call([$moduleMetadata->fqcn, 'getRoutes']);
+                        foreach ($moduleRoutes as $routeName => $routeConfig) {
 
-                        $route = new Route();
-                        $route->name = $routeName;
-                        $route->module = $moduleMetadata;
-                        $route->endpoint = $routeConfig["endpoint"];
-                        $route->fullname = $moduleMetadata->name.".".$routeName;
-                        $route->allowedMethods = $routeConfig['methods'];
+                            $routeConfig = array_replace($defaultRoute, $routeConfig);
 
-                        $routes[$route->fullname] = $route;
+                            $route = new Route();
+                            $route->name = $routeName;
+                            $route->module = $moduleMetadata;
+                            $route->endpoint = $routeConfig["endpoint"];
+                            $route->fullname = $moduleMetadata->name.".".$routeName;
+                            $route->allowedMethods = $routeConfig['methods'];
+
+                            $routes[$route->fullname] = $route;
+
+                        }
 
                     }
 
@@ -341,11 +345,15 @@
         {
             foreach ($modules as $moduleMetadata) {
 
-                $services = forward_static_call([$moduleMetadata->fqcn, 'getServices']);
-                foreach ($services as $serviceName => $serviceProvider) {
+                if (class_exists($moduleMetadata->fqcn)) {
 
-                    $serviceProviderFqcn = $moduleMetadata->namespace.$serviceProvider;
-                    self::setService($serviceName, new $serviceProviderFqcn(self::$services));
+                    $services = forward_static_call([$moduleMetadata->fqcn, 'getServices']);
+                    foreach ($services as $serviceName => $serviceProvider) {
+
+                        $serviceProviderFqcn = $moduleMetadata->namespace.$serviceProvider;
+                        self::setService($serviceName, new $serviceProviderFqcn(self::$services));
+
+                    }
 
                 }
 
