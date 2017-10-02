@@ -110,6 +110,11 @@
                 /* Request processing */
 
                 self::$request = new Request(true);
+                if (array_key_exists("uriPrefix", $settings) && !empty($settings["uriPrefix"])) {
+
+                    self::$request->uri = substr_replace(self::$request->uri, "", 0, strlen($settings["uriPrefix"]));
+
+                }
 
                 $parsingResult = self::$request->parseRequestBody();
                 if ($parsingResult instanceof ProblemResponse) {
