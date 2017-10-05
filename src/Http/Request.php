@@ -220,7 +220,11 @@
                     $this->body = $try;
                     array_walk_recursive($this->body, function(&$value){
 
-                        $value = trim($value);
+                        if (is_string($value)) {
+
+                            $value = trim($value);
+
+                        }
 
                     });
 
