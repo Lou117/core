@@ -33,6 +33,8 @@ As of *Core* v1.4.0, below default values are applied to *Core* settings:
     "startSession"  => false,
     // If provided, URI prefix is removed from incoming request URI before routing.
     "uriPrefix"     => "",
+    // Monolog channel for Core logging.
+    "logChannel"    => "core",
     // Modules to be registered.
     "modules"       => []
 ]

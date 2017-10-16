@@ -71,6 +71,7 @@ class SettingsProvider extends AbstractServiceProvider
             "debugMode"     => false,
             "startSession"  => false,
             "uriPrefix"     => "",
+            "logChannel"    => "core",
             "modules"       => []
         ], $incoming_settings);
 
