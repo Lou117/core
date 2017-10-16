@@ -69,7 +69,7 @@
             }
 
             $params = array_replace([
-                "settings" => null,
+                "settings" => [],
                 "composerLoader" => null
             ], $params);
 
