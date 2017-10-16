@@ -47,7 +47,7 @@ class SettingsProvider extends AbstractServiceProvider
 
         }
 
-        $this->settings = $this->setDefaultValues($settings);
+        $this->setDefaultValues($settings);
         return $this;
     }
 
