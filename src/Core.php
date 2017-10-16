@@ -55,21 +55,28 @@
          * Core main method, to be called by public/index.php.
          * This method has an internal try-catch block, so there is no real need to surround a Core::boot call with
          * another try-catch block.
-         * @param string $application_directory - application root directory path, to be used for retrieval of all
-         * needed files (mainly settings) and FastRoute cache writing.
-         * @param ClassLoader $composer_loader - Composer loader to be use for registering modules at runtime.
+         * @param array $params - an associative array with two keys:
+         * - 'settings': if value is an array, given array will be used as settings; if value is a string, Core will
+         * search for a file named as given string, and load this file, expecting an array.
+         * - 'composerLoader': an instance of Composer\Autoload\ClassLoader to be used for module registering.
          */
-        public static function boot(ClassLoader $composer_loader)
+        public static function boot(array $params = [])
         {
             if (self::$booted) {
 
-                throw new LogicException('Core::boot method cannot be called twice');
+                throw new LogicException('Core::boot method must not be called twice');
 
             }
 
-            self::$composerLoader = $composer_loader;
+            $params = array_replace([
+                "settings" => null,
+                "composerLoader" => null
+            ], $params);
 
-            self::setService('core.settings', new SettingsProvider(self::$services));
+            self::$composerLoader = $params["composerLoader"];
+
+            $settingsProvider = new SettingsProvider(self::$services);
+            self::setService('core.settings', $settingsProvider->set($params));
 
             try {
 
@@ -78,10 +85,10 @@
                 $settings = self::getService('core.settings');
 
                 /*
-                 * "Debug mode" is ability for Problem instances to carry exceptions' message instead of a generic
-                 * "Internal Server Error" message.
+                 * "Debug mode" is ability for Problem instances to carry exceptions' message and debug trace instead of
+                 * a generic "Internal Server Error" message.
                  */
-                if (array_key_exists('debugMode', $settings) && $settings != false) {
+                if ($settings["debugMode"]) {
 
                     Problem::$debugMode = true;
 
@@ -97,7 +104,7 @@
                 $time = round(microtime(true) - $start, 5);
                 self::getService('core.logger')->info('Routes loading took '.$time.'s');
 
-                if ($settings['startSession']) {
+                if ($settings["startSession"]) {
 
                     session_start();
 
@@ -110,7 +117,7 @@
                 /* Request processing */
 
                 self::$request = new Request(true);
-                if (array_key_exists("uriPrefix", $settings) && !empty($settings["uriPrefix"])) {
+                if (!empty($settings["uriPrefix"])) {
 
                     self::$request->uri = substr_replace(self::$request->uri, "", 0, strlen($settings["uriPrefix"]));
 
