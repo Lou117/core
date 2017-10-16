@@ -76,7 +76,7 @@
             self::$composerLoader = $params["composerLoader"];
 
             $settingsProvider = new SettingsProvider(self::$services);
-            self::setService('core.settings', $settingsProvider->set($params));
+            self::setService('core.settings', $settingsProvider->set($params["settings"]));
 
             try {
 
