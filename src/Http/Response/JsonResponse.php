@@ -59,6 +59,10 @@ class JsonResponse extends AbstractResponse
 
             $this->body = array_replace_recursive($this->body, $body);
 
+        } else {
+
+            $this->body = $body;
+
         }
 
         return $this;
