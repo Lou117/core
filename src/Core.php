@@ -264,7 +264,7 @@
             return array_replace_recursive([
                 "log" => [
                     "channel" => "core",
-                    "class" => ["Monolog\Handler\RotatingFileHandler", ["var/log", 10]]
+                    "class" => ["Monolog\Handler\RotatingFileHandler", ["var/log/", 10]]
                 ],
                 "routerCachePath" => "var/cache/fastroute"
             ], $loaded_settings);
