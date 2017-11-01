@@ -10,14 +10,17 @@ namespace Lou117\Core\Http\Response;
 class TextResponse extends AbstractResponse
 {
     /**
-     * @see AbstractResponse::$contentMimeType
+     * @see AbstractResponse::getMimetype()
+     * @return string
      */
-    protected $contentMimeType = 'text/plain';
+    public function getMimetype(): string
+    {
+        return "text/plain";
+    }
 
     /**
      * Sets HTTP response body, forcing passed value to string type using settype().
-     * @see AbstractResponse::setBody()
-     * @see settype()
+     *
      * @param mixed $body - HTTP response body.
      * @return AbstractResponse
      */

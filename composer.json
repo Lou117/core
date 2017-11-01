@@ -17,8 +17,10 @@
         "source": "https://github.com/Lou117/core"
     },
     "require": {
-        "nikic/fast-route": "1.*",
-        "monolog/monolog": "1.*"
+        "php": "7.1.*",
+        "nikic/fast-route": "1.2.*",
+        "monolog/monolog": "1.*",
+        "guzzlehttp/psr7": "1.4.*"
     },
     "autoload": {
         "psr-4": {

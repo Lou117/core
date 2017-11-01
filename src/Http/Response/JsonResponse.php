@@ -13,20 +13,40 @@ use \InvalidArgumentException;
 class JsonResponse extends AbstractResponse
 {
     /**
-     * @see AbstractResponse::$contentMimeType
+     * @see AbstractResponse::getBody()
+     * @return string
      */
-    protected $contentMimeType = 'application/json';
+    public function getBody(): string
+    {
+        $return = json_encode($this->body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($return === null) {
+
+            $error = json_last_error_msg();
+            throw new RuntimeException("JSON encoding has failed ({$error})");
+
+        }
+
+        return $return;
+    }
 
     /**
-     * Sets HTTP response body, forcing passed value to string type using settype().
-     * @see AbstractResponse::setBody()
-     * @see settype()
-     * @param mixed $body - HTTP response body.
-     * @return AbstractResponse
-     * @throws InvalidArgumentException - when passed value type is not array nor object
-     * @throws RuntimeException - when JSON encoding failed
+     * @see AbstractResponse::getMimetype()
+     * @return string
      */
-    public function setBody($body): AbstractResponse
+    public function getMimetype(): string
+    {
+        return "application/json";
+    }
+
+    /**
+     * Sets HTTP response body.
+     *
+     * @param array|object $body
+     * @param bool $merge - If set to true, and if passed body and existing body are both of type array, passed body
+     * will be merged with existing body using array_replace_recursive.
+     * @return AbstractResponse
+     */
+    public function setBody($body, bool $merge = false): AbstractResponse
     {
         if (!is_array($body) && !is_object($body)) {
 
@@ -35,11 +55,9 @@ class JsonResponse extends AbstractResponse
 
         }
 
-        $this->body = json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if ($body === null) {
+        if (is_array($body) && is_array($this->body) && $merge) {
 
-            $error = json_last_error_msg();
-            throw new RuntimeException("JSON encoding has failed ({$error})");
+            $this->body = array_replace_recursive($this->body, $body);
 
         }
 
