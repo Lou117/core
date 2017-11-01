@@ -18,15 +18,21 @@ class JsonResponse extends AbstractResponse
      */
     public function getBody(): string
     {
-        $return = json_encode($this->body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if ($return === null) {
+        if (is_array($this->body) || is_object($this->body)) {
 
-            $error = json_last_error_msg();
-            throw new RuntimeException("JSON encoding has failed ({$error})");
+            $return = json_encode($this->body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            if ($return === null) {
+
+                $error = json_last_error_msg();
+                throw new RuntimeException("JSON encoding has failed ({$error})");
+
+            }
+
+            return $return;
 
         }
 
-        return $return;
+        return "";
     }
 
     /**
