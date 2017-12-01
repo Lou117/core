@@ -81,7 +81,7 @@
                  * "Debug mode" is ability for Problem instances to carry exceptions' message instead of a generic
                  * "Internal Server Error" message.
                  */
-                if (array_key_exists('debugMode', $settings) && $settings != false) {
+                if (array_key_exists('debugMode', $settings) && $settings["debugMode"] != false) {
 
                     Problem::$debugMode = true;
 
