@@ -8,6 +8,7 @@
 
 namespace Lou117\Core;
 
+use \Exception;
 use Lou117\Core\Http\Response\AbstractResponse;
 
 abstract class AbstractController
@@ -22,9 +23,19 @@ abstract class AbstractController
      *
      * @param $controller_method
      * @return AbstractResponse
+     * @throws Exception
      */
     public function run($controller_method): AbstractResponse
     {
-        return $this->{$controller_method}();
+        if (method_exists($this, $controller_method) === false) {
+
+            $class = get_class($this);
+            throw new Exception("Method {$controller_method} declared in routes doesn't exists in {$class}");
+
+        } else {
+
+            return $this->{$controller_method}();
+
+        }
     }
 }
