@@ -13,6 +13,15 @@ use \InvalidArgumentException;
 class JsonResponse extends AbstractResponse
 {
     /**
+     * Set this static property to `true` when you want JSON to be pretty-printed.
+     * This property may only be used when debugging, as pretty-print can increase payload size.
+     *
+     * @var bool
+     */
+    static public $prettyPrint = false;
+
+
+    /**
      * @see AbstractResponse::getBody()
      * @return string
      */
@@ -20,7 +29,14 @@ class JsonResponse extends AbstractResponse
     {
         if (is_array($this->body) || is_object($this->body)) {
 
-            $return = json_encode($this->body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            $mask = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK;
+            if (self::$prettyPrint) {
+
+                $mask = $mask | JSON_PRETTY_PRINT;
+
+            }
+
+            $return = json_encode($this->body, $mask);
             if ($return === null) {
 
                 $error = json_last_error_msg();
