@@ -117,11 +117,13 @@ class AbstractController extends CoreAbstractController
         parent::run($controller_method);
     }
 }
-```
-By re-implementing `AbstractController::__construct()` method, you can use the `Core` instance passed as only parameter to initialize 
-anything you need before any endpoint-specific logic. Please keep in mind that what happen in `__construct()` method is 
-executed with every HTTP request.
+``` 
+By re-implementing `AbstractController::__construct()` method, you can use the `Core` instance given as only parameter 
+to initialize anything you need before any endpoint-specific logic. You will most probably want to "transfer" incoming 
+request object (which is a Guzzle PSR-7 `ServerRequest` object) from `Core` instance to your `AbstractController` class, 
+and do the same with *Core* logger and *Core* settings. Feel free.
 
 By re-implementing `AbstractController::run()` method, you can execute any code that must be executed with every HTTP 
-request but depends on computed route. You can also use this method to abort execution based on specific data attached 
-to route or request.
+request but depends on computed route. By implementing this method as a *middleware*, you can add some logic before and 
+after any endpoint-specific logic, adding conditions to execution or applying some processing to the `AbstractResponse` 
+instance returned by endpoint-specific logic.
