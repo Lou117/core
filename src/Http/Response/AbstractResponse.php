@@ -133,7 +133,7 @@ abstract class AbstractResponse
      *
      * @return string
      */
-    public function getBody(): string
+    public function getBody(): ?string
     {
         return $this->body;
     }
@@ -171,7 +171,11 @@ abstract class AbstractResponse
 
         }
 
-        echo $this->getBody();
+        if ($this->body !== null) {
+
+            echo $this->getBody();
+
+        }
     }
 
     /**
