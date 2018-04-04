@@ -15,13 +15,6 @@ namespace Lou117\Core\Http\Response;
 class EmptyResponse extends AbstractResponse
 {
     /**
-     * Response body is forced to an empty value.
-     *
-     * @var null
-     */
-    protected $body = "";
-
-    /**
      * Status code is set to 204 by default, to comply with RFC7231 (HTTP responses with code 200 are required to have a
      * payload).
      *

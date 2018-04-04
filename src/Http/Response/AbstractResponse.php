@@ -182,7 +182,7 @@ abstract class AbstractResponse
     protected function sendHeaders(): AbstractResponse
     {
         header(self::HTTP_PROTOCOL." {$this->statusCode} {$this->reasonPhrase}");
-        if (!empty($this->body)) {
+        if ($this->body !== null) {
 
             $mimeType = $this->getMimetype();
             if (empty($mimeType)) {
