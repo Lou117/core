@@ -108,7 +108,7 @@ abstract class AbstractResponse
     public function __construct($body = null, int $status_code = 200)
     {
         $this->setStatus($status_code);
-        if (!empty($body)) {
+        if ($body !== null) {
 
             $this->setBody($body);
 
