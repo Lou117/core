@@ -9,6 +9,7 @@
 namespace Lou117\Core;
 
 use \Exception;
+use \LogicException;
 use Psr\Http\Message\ResponseInterface;
 
 abstract class AbstractController
@@ -33,6 +34,13 @@ abstract class AbstractController
             throw new Exception("Method {$controller_method} declared in routes doesn't exists in {$class}");
 
         } else {
+
+            $response = $this->{$controller_method}();
+            if (($response instanceof ResponseInterface) === false) {
+
+                throw new LogicException("Method {$controller_method} must return an instance of PSR-7 ResponseInterface");
+
+            }
 
             return $this->{$controller_method}();
 
