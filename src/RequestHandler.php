@@ -9,6 +9,7 @@ namespace Lou117\Core;
 
 use Lou117\Core\Container\Container;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
@@ -19,6 +20,13 @@ class RequestHandler implements RequestHandlerInterface
      * @var Container
      */
     public $container;
+
+    /**
+     * Middleware sequence from first layer to last layer.
+     * @var MiddlewareInterface[]
+     */
+    protected $middlewareSequence = [];
+
 
     /**
      * @param Container $core_container
@@ -34,17 +42,32 @@ class RequestHandler implements RequestHandlerInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        /**
-         * @var Route $route
-         */
-        $route = $this->container->get("route");
+        $middleware = current($this->middlewareSequence);
+        next($this->middlewareSequence);
 
-        $controllerData = explode("::", $route->controller);
+        if ($middleware instanceof MiddlewareInterface) {
 
-        /**
-         * @var $controller AbstractController
-         */
-        $controller = new $controllerData[0]($this->container);
-        return $controller->run($controllerData[1]);
+            $response = $middleware->process($request, $this);
+
+        }
+
+        if (!isset($response)) {
+
+            /**
+             * @var Route $route
+             */
+            $route = $this->container->get("route");
+
+            $controllerData = explode("::", $route->controller);
+
+            /**
+             * @var $controller AbstractController
+             */
+            $controller = new $controllerData[0]($this->container);
+            $response = $controller->run($controllerData[1]);
+
+        }
+
+        return $response;
     }
 }

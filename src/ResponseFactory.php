@@ -7,12 +7,111 @@
  */
 namespace Lou117\Core;
 
+use GuzzleHttp\Psr7\Response;
+use \InvalidArgumentException;
+use function GuzzleHttp\Psr7\stream_for;
 use Psr\Http\Message\ResponseInterface;
 
 class ResponseFactory
 {
     const HTTP_HEADER_ALLOW = "Allow";
 
+
+    /**
+     * Creates an HTML response (with Content-Type header set to "text/html").
+     * @param string $body - Response body. If trim()-ed body is an empty string, neither Content-Type header nor body will be
+     * added to returned response.
+     * @param int $status - Response status (defaults to 200).
+     * @return ResponseInterface
+     */
+    public static function createHtmlResponse(string $body, int $status = 200): ResponseInterface
+    {
+        $response = new Response($status);
+        if (strlen(trim($body)) > 0) {
+
+            $response = $response
+                ->withHeader("Content-Type", "text/html")
+                ->withBody(stream_for($body));
+
+        }
+
+        return $response;
+    }
+
+    /**
+     * Creates a JSON response (with Content-Type header set to "application/json").
+     * @param $body - Response body to be encoded to JSON. If JSON encoding results in a empty string, neither
+     * Content-Type header nor body will be added to returned response.
+     * @param int $status - Response status (defaults to 200).
+     * @return ResponseInterface
+     * @throws InvalidArgumentException - when given $body cannot be encoded to JSON (json_encode() returned NULL).
+     */
+    public static function createJsonResponse($body, int $status = 200): ResponseInterface
+    {
+        $encodedBody = json_encode($body);
+        if ($encodedBody === null) {
+
+            throw new InvalidArgumentException("Given body cannot be encoded to JSON");
+
+        }
+
+        $response = new Response($status);
+        if (strlen($encodedBody) > 0) {
+
+            $response = $response
+                ->withHeader("Content-Type", "application/json")
+                ->withBody(stream_for($encodedBody));
+
+        }
+
+        return $response;
+    }
+
+    /**
+     *
+     * @param $body - Response body. If trim()-ed body is an empty string, neither Content-Type header nor body will be
+     * added to returned response.
+     * @param int $status - Response status (defaults to 200).
+     * @return ResponseInterface
+     */
+    /**
+     * Creates a redirect response, with status set to 302 and Location header set to given $location.
+     * @param string $location - value for Location header.
+     * @return ResponseInterface
+     * @throws InvalidArgumentException - when given $location is an empty string.
+     */
+    public static function createRedirectResponse(string $location): ResponseInterface
+    {
+        if (empty($location)) {
+
+            throw new InvalidArgumentException("Location header value cannot be empty");
+
+        }
+
+        $response = new Response(302);
+        return $response->withHeader("Location", $location);
+    }
+
+    /**
+     * Creates a text response (with Content-Type header set to "text/plain").
+     * @param $body - Response body. If trim()-ed body is an empty string, neither Content-Type header nor body will be
+     * added to returned response.
+     * @param int $status - Response status (defaults to 200).
+     * @return ResponseInterface
+     */
+    public static function createTextResponse($body, int $status = 200): ResponseInterface
+    {
+        $response = new Response($status);
+        if (strlen(trim($body)) > 0) {
+
+            $response = $response
+                ->withHeader("Content-Type", "text/plain")
+                ->withBody(stream_for($body));
+
+        }
+
+        return $response;
+    }
 
     /**
      * Returns true if the provided response must not output a body and false
