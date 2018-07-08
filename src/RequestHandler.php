@@ -34,6 +34,7 @@ class RequestHandler implements RequestHandlerInterface
     public function __construct(Container $core_container)
     {
         $this->container = $core_container;
+        $this->middlewareSequence = $this->container->get("settings")["mw-sequence"];
     }
 
     /**
