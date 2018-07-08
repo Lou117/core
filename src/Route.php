@@ -1,14 +1,27 @@
 <?php
     namespace Lou117\Core;
 
-    use Lou117\Core\Module\ModuleMetadata;
-
+    /**
+     * Describes a route.
+     *
+     * @package Lou117\Core
+     */
     class Route
     {
         /**
-         * @var [string]
+         * @var mixed[]
          */
-        public $allowedMethods;
+        public $arguments;
+
+        /**
+         * @var mixed[]
+         */
+        public $attributes;
+
+        /**
+         * @var string
+         */
+        public $controller;
 
         /**
          * @var string
@@ -16,22 +29,12 @@
         public $endpoint;
 
         /**
-         * @var string
+         * @var string[]
          */
-        public $fullname;
-
-        /**
-         * @var ModuleMetadata
-         */
-        public $module;
+        public $methods;
 
         /**
          * @var string
          */
         public $name;
-
-        /**
-         * @var [mixed]
-         */
-        public $uriData;
     }

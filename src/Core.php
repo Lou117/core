@@ -4,395 +4,285 @@
     use FastRoute;
     use \Exception;
     use Monolog\Logger;
-    use \LogicException;
-    use Lou117\Core\Http\Request;
-    use Composer\Autoload\ClassLoader;
-    use Lou117\Core\Module\ModuleMetadata;
-    use Lou117\Core\Module\AbstractModule;
-    use Lou117\Core\Service\RoutingProvider;
-    use Lou117\Core\Service\LoggerProvider;
-    use Monolog\Handler\RotatingFileHandler;
-    use Lou117\Core\Service\SettingsProvider;
-    use Lou117\Core\Http\Response\TextResponse;
-    use Lou117\Core\Http\Response\ProblemResponse;
+    use \InvalidArgumentException;
+    use GuzzleHttp\Psr7\ServerRequest;
+    use Lou117\Core\Http\Response\EmptyResponse;
     use Lou117\Core\Http\Response\AbstractResponse;
-    use Lou117\Core\Service\AbstractServiceProvider;
+    use Lou117\Core\Exception\RoutesNotFoundException;
+    use Lou117\Core\Exception\SettingsNotFoundException;
 
+    /**
+     * Class Core
+     * @package Lou117\Core
+     * @property Logger $logger
+     * @property ServerRequest $request
+     * @property array $settings
+     */
     class Core
     {
-        const ROUTES_CACHE_FILEPATH = 'cache/routes';
-
-
         /**
-         * @var bool
-         */
-        protected static $booted = false;
-
-        /**
-         * @var ClassLoader
-         */
-        protected static $composerLoader;
-
-        /**
-         * HTTP request.
-         * @var Request
-         */
-        protected static $request;
-
-        /**
+         * Core internal data storage.
          * @var array
          */
-        protected static $services = [];
-
-
-        protected function __construct(){}
-
-        protected function __sleep(){}
-
-        protected function __wakeUp(){}
+        protected $store = [
+            "logger"    => null,
+            "request"   => null,
+            "settings"  => null
+        ];
 
         /**
-         * Core main method, to be called by public/index.php.
-         * This method has an internal try-catch block, so there is no real need to surround a Core::boot call with
-         * another try-catch block.
-         * @param array $params - an associative array with two keys:
-         * - 'settings': if value is an array, given array will be used as settings; if value is a string, Core will
-         * search for a file named as given string, and load this file, expecting an array.
-         * - 'composerLoader': an instance of Composer\Autoload\ClassLoader to be used for module registering.
+         * @var FastRoute\Dispatcher
          */
-        public static function boot(array $params = [])
+        protected $router;
+
+        /**
+         * @var Route[]
+         */
+        protected $routes = [];
+
+
+        /**
+         * Core constructor, to be called by entry script.
+         *
+         * @param string $settings_filepath - Path to settings file.
+         * @param string $routes_filepath - Path to routes file.
+         */
+        public function __construct(string $settings_filepath, string $routes_filepath)
         {
-            if (self::$booted) {
+            $this->loadSettings($settings_filepath);
+            $this->initLogger();
+            $this->loadRoutes($routes_filepath);
 
-                throw new LogicException('Core::boot method must not be called twice');
+            $this->store["request"] = ServerRequest::fromGlobals();
+        }
 
-            }
-
-            $params = array_replace([
-                "settings" => [],
-                "composerLoader" => null
-            ], $params);
-
-            self::$composerLoader = $params["composerLoader"];
-
-            $settingsProvider = new SettingsProvider(self::$services);
-            self::setService('core.settings', $settingsProvider->set($params["settings"]));
-
+        /**
+         * Core main method, to be called by entry script.
+         *
+         * @throws Exception
+         */
+        public function run()
+        {
             try {
 
-                self::setService('core.logger', new LoggerProvider(self::$services));
-
-                $settings = self::getService('core.settings');
-
-                /*
-                 * "Debug mode" is ability for Problem instances to carry exceptions' message and debug trace instead of
-                 * a generic "Internal Server Error" message.
-                 */
-                if ($settings["debugMode"]) {
-
-                    Problem::$debugMode = true;
-
-                }
-
-                $start = microtime(true);
-                $modules = self::loadModules();
-                $time = round(microtime(true) - $start, 5);
-                self::getService('core.logger')->info('Modules loading took '.$time.'s');
-
-                $start = microtime(true);
-                self::loadRoutes($modules);
-                $time = round(microtime(true) - $start, 5);
-                self::getService('core.logger')->info('Routes loading took '.$time.'s');
-
-                if ($settings["startSession"]) {
-
-                    session_start();
-
-                }
-
-                self::loadServices($modules);
-
-
-
-                /* Request processing */
-
-                self::$request = new Request(true);
-                if (!empty($settings["uriPrefix"])) {
-
-                    self::$request->uri = substr_replace(self::$request->uri, "", 0, strlen($settings["uriPrefix"]));
-
-                }
-
-                $parsingResult = self::$request->parseRequestBody();
-                if ($parsingResult instanceof ProblemResponse) {
-
-                    $parsingResult->send();
-                    return;
-
-                }
-
-                // Routing
-                $dispatchResult = self::dispatch();
-                if ($dispatchResult instanceof TextResponse) {
+                $dispatchResult = $this->dispatch();
+                if ($dispatchResult instanceof EmptyResponse) {
 
                     $dispatchResult->send();
-                    return;
+                    die();
 
                 }
 
-                $moduleClass = $dispatchResult->module->fqcn;
+                /**
+                 * @var Route $route
+                 */
+                $route = $this->store["request"]->getAttribute("route");
+
+                $controllerData = explode("::", $route->controller);
 
                 /**
-                 * @var $module AbstractModule
+                 * @var $controller AbstractController
                  */
-                $module = new $moduleClass(self::$request, $dispatchResult);
-
-                $response = $module->run();
-                $response->send();
+                $controller = new $controllerData[0]($this);
+                $controller->run($controllerData[1])->send();
 
             } catch (Exception $e) {
 
-                if (self::hasService('core.logger')) {
-
-                    self::getService('core.logger')->critical($e->getMessage(), $e->getTrace());
-
-                }
-
-                $response = new ProblemResponse();
-                $response->send(AbstractResponse::HTTP_500, new Problem($e));
+                $this->store["logger"]->error($e->getMessage());
+                throw $e;
 
             }
-
-            return;
         }
 
         /**
          * Run FastRoute router.
-         * @return Route|AbstractResponse - returns an instance of TextResponse with HTTP code automatically set if no
-         * result was found for route (404) or if a route was found but HTTP method is not allowed (405).
+         *
+         * @return AbstractResponse|bool - Returns true or a ready-to-use instance of EmptyResponse with HTTP code set
+         * if no result was found (404) or if a route was found but HTTP method is not allowed (405).
          */
-        protected static function dispatch()
+        protected function dispatch()
         {
-            $response = new TextResponse();
-            $routeInfo = self::getService('core.routing')->getRouter()->dispatch(self::$request->method, self::$request->uri);
-            if ($routeInfo[0] === FastRoute\Dispatcher::NOT_FOUND) {
+            /**
+             * @var $request ServerRequest
+             */
+            $request = $this->store["request"];
+            $response = new EmptyResponse();
 
-                return $response->setStatusCode(AbstractResponse::HTTP_404);
+            $routerResult = $this->router->dispatch($request->getMethod(), $request->getUri()->getPath());
+            if ($routerResult[0] === FastRoute\Dispatcher::NOT_FOUND) {
+
+                return $response->setStatus(404);
 
             }
 
-            if ($routeInfo[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
+            if ($routerResult[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
 
-                $allowedMethodsAsString = implode(', ', $routeInfo[1]);
+                $allowedMethodsAsString = implode(', ', $routerResult[1]);
                 $response->addHeader(AbstractResponse::HTTP_HEADER_ALLOW, $allowedMethodsAsString);
-                return $response->setStatusCode(AbstractResponse::HTTP_405);
+                return $response->setStatus(405);
 
             }
 
-            $route = self::getService('core.routing')->getRoutes()[$routeInfo[1]];
-            $route->uriData = $routeInfo[2];
+            $route = $this->routes[$routerResult[1]];
+            $route->arguments = array_replace_recursive($route->arguments, $routerResult[2]);
 
-            return $route;
+            $this->store["request"] = $request->withAttribute("route", $route);
+
+            return true;
         }
 
         /**
-         * Returns TRUE when a service exists under given service name, FALSE otherwise.
-         * @param string $service_name
-         * @return bool
+         * Initializes Core logger.
+         * @return Core
          */
-        public static function hasService(string $service_name): bool
+        protected function initLogger(): Core
         {
-            return array_key_exists($service_name, self::$services);
+            $settings = $this->store["settings"];
+            $logger = new Logger($settings["log"]["channel"]);
+            $logger->pushHandler(new $settings["log"]["class"][0](...$settings["log"]["class"][1]));
+
+            $this->store["logger"] = $logger;
+
+            return $this;
         }
 
         /**
-         * Returns service by service name.
-         * @param string $service_name
-         * @return mixed
-         * @throws Exception - when no service is found with given name.
+         * Loads application routes.
+         * @param string $routes_filepath - Routes file path.
+         * @return Core
          */
-        public static function getService(string $service_name)
+        protected function loadRoutes(string $routes_filepath): Core
         {
-            if (array_key_exists($service_name, self::$services)) {
+            $loadedRoutes = $this->requireFile($routes_filepath);
+            if ($loadedRoutes === null) {
 
-                return self::$services[$service_name]->get();
+                throw new RoutesNotFoundException();
 
             }
 
-            throw new Exception("Unknown service {$service_name}");
-        }
-
-        /**
-         * Loads modules declared by settings file, adding them to Composer and loading their routes (if any).
-         * @return ModuleMetadata[]
-         */
-        protected static function loadModules(): array
-        {
-            $default = [
-                "composerNamespace" => null,
-                "composerPath" => null,
-                "services" => []
+            $defaultRouteConfig = [
+                "methods" => [],
+                "endpoint" => null,
+                "arguments" => [],
+                "controller" => null
             ];
 
-            $modules = [];
-            $settings = self::getService('core.settings');
-            foreach ($settings['modules'] as $moduleName => $moduleConfig) {
+            $routes = [];
+            foreach ($loadedRoutes as $routeName => $routeConfig) {
 
-                $moduleConfig = array_replace_recursive($default, $moduleConfig);
+                $routeConfig = array_replace_recursive($defaultRouteConfig, $routeConfig);
 
-                if (!empty($moduleConfig["composerNamespace"]) && !empty($moduleConfig["composerPath"])) {
+                $route = new Route();
+                $route->name = $routeName;
+                $route->methods = $routeConfig["methods"];
+                $route->endpoint = $routeConfig["endpoint"];
+                $route->arguments = $routeConfig["arguments"];
+                $route->controller = $routeConfig["controller"];
 
-                    self::$composerLoader->addPsr4($moduleConfig["composerNamespace"], $moduleConfig["composerPath"]);
+                unset(
+                    $routeConfig["endpoint"],
+                    $routeConfig["methods"],
+                    $routeConfig["arguments"],
+                    $routeConfig["controller"]
+                );
 
-                }
-
-                $moduleMetadata = new ModuleMetadata();
-                $moduleMetadata->name = $moduleName;
-                $moduleMetadata->fqcn = $moduleConfig["composerNamespace"]."Module";
-                $moduleMetadata->services = [];
-                $moduleMetadata->namespace = $moduleConfig["composerNamespace"];
-
-                if (array_key_exists("services", $moduleConfig) && is_array($moduleConfig["services"])) {
-
-                    $moduleMetadata->services = $moduleConfig["services"];
-
-                }
-
-                $modules[$moduleName] = $moduleMetadata;
-
-            }
-
-            return $modules;
-        }
-
-        /**
-         * Loads module routes, caching it if necessary, and set FastRoute dispatcher up.
-         * By default, Core will use FastRoute\simpleDispatcher function, but if cache/ directory exists and is
-         * writable, FastRoute\cachedDispatcher will be preferred. FastRoute router and loaded routes are registered as
-         * a service through RoutingProvider.
-         * @param ModuleMetadata[] $modules
-         * @return bool
-         */
-        protected static function loadRoutes(array $modules): bool
-        {
-            if (!file_exists(self::ROUTES_CACHE_FILEPATH)) {
-
-                self::getService('core.logger')->info('Generating routes');
-
-                $defaultRoute = [
-                    "endpoint" => "",
-                    "methods" => []
-                ];
-
-                $routes = [];
-                foreach ($modules as $moduleMetadata) {
-
-                    if (class_exists($moduleMetadata->fqcn)) {
-
-                        $moduleRoutes = forward_static_call([$moduleMetadata->fqcn, 'getRoutes']);
-                        foreach ($moduleRoutes as $routeName => $routeConfig) {
-
-                            $routeConfig = array_replace($defaultRoute, $routeConfig);
-
-                            $route = new Route();
-                            $route->name = $routeName;
-                            $route->module = $moduleMetadata;
-                            $route->endpoint = $routeConfig["endpoint"];
-                            $route->fullname = $moduleMetadata->name.".".$routeName;
-                            $route->allowedMethods = $routeConfig['methods'];
-
-                            $routes[$route->fullname] = $route;
-
-                        }
-
-                    }
-
-                }
-
-                file_put_contents(self::ROUTES_CACHE_FILEPATH, serialize($routes));
-
-            } else {
-
-                $routes = unserialize(file_get_contents(self::ROUTES_CACHE_FILEPATH));
-                self::getService('core.logger')->info('Routes loaded from cache');
-
+                $route->attributes = $routeConfig;
+                $routes[$route->name] = $route;
             }
 
             $function = 'FastRoute\simpleDispatcher';
-            $params = array();
+            $params = [];
 
-            $cacheDir = 'cache';
-            $cacheFile = $cacheDir.'/fastroute';
-            if (is_dir($cacheDir) && is_writable($cacheDir)) {
+            if (is_writable($this->store["settings"]["routerCachePath"])) {
 
-                if (!file_exists($cacheFile) || is_writable($cacheFile)) {
-
-                    $function = 'FastRoute\cachedDispatcher';
-                    $params = [
-                        'cacheFile' => $cacheFile
-                    ];
-
-                }
+                $function = 'FastRoute\cachedDispatcher';
+                $params = [
+                    'cacheFile' => $this->store["settings"]["routerCachePath"]
+                ];
 
             }
 
-            $router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
+            $this->routes = $routes;
 
+            $this->router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
+
+                /**
+                 * @var Route $routeObject
+                 */
                 foreach ($routes as $routeObject) {
 
-                    $r->addRoute($routeObject->allowedMethods, $routeObject->endpoint, $routeObject->fullname);
+                    $r->addRoute($routeObject->methods, $routeObject->endpoint, $routeObject->name);
 
                 }
 
             }, $params);
 
-            $routerProvider = new RoutingProvider(self::$services);
-            $routerProvider
-                ->setRouter($router)
-                ->setRoutes($routes);
-
-            self::setService('core.routing', $routerProvider);
-
-            return true;
+            return $this;
         }
 
         /**
-         * Loads services declared by modules.
-         * @param ModuleMetadata[] $modules
-         * @return bool
+         * Loads Core settings.
+         * @param string $settings_filepath - Settings file path.
+         * @return Core
          */
-        protected static function loadServices(array $modules): bool
+        protected function loadSettings(string $settings_filepath): Core
         {
-            foreach ($modules as $moduleMetadata) {
+            $settings = $this->requireFile($settings_filepath);
+            if ($settings === null) {
 
-                foreach ($moduleMetadata->services as $serviceName => $serviceClassname) {
-
-                    $serviceProviderFqcn = $moduleMetadata->namespace.$serviceClassname;
-                    self::setService($serviceName, new $serviceProviderFqcn(self::$services));
-
-                }
+                throw new SettingsNotFoundException();
 
             }
 
-            return true;
+            $this->store["settings"] = $this->setDefaultSettings($settings);
+            return $this;
         }
 
         /**
-         * Registers a new service provider under given service name.
-         * @param string $service_name - service name used by third parties as an identifier.
-         * @param AbstractServiceProvider $service_provider
-         * @return bool
-         * @throws Exception - when a service is already registered using given name.
+         * Requires the file located at given $filepath using require(). Required file must return an array.
+         * @param string $filepath - Path to file that must be required.
+         * @return array|null
          */
-        protected static function setService(string $service_name, AbstractServiceProvider $service_provider): bool
+        protected function requireFile(string $filepath): ?array
         {
-            if (array_key_exists($service_name, self::$services)) {
+            if (!file_exists($filepath)) {
 
-                throw new Exception("Service name conflict ({$service_name})");
+                return null;
 
             }
 
-            self::$services[$service_name] = $service_provider;
-            return true;
+            return require($filepath);
+        }
+
+        /**
+         * Applies default settings to given loaded settings, ensuring that some critical settings values are provided.
+         * @param array $loaded_settings - Loaded settings.
+         * @return array
+         */
+        protected function setDefaultSettings(array $loaded_settings): array
+        {
+            return array_replace_recursive([
+                "log" => [
+                    "channel" => "core",
+                    "class" => ["Monolog\Handler\RotatingFileHandler", ["var/log/log", 10]]
+                ],
+                "routerCachePath" => "var/cache/fastroute"
+            ], $loaded_settings);
+        }
+
+        /**
+         * Allows read-only access to Core settings, routes and logger.
+         * @param string $name - Can be "settings", "routes" or "logger".
+         * @return mixed
+         */
+        public function __get(string $name)
+        {
+            if (!array_key_exists($name, $this->store)) {
+
+                throw new InvalidArgumentException("Core has no available property {$name}");
+
+            }
+
+            return $this->store[$name];
         }
     }

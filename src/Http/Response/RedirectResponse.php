@@ -7,27 +7,26 @@
  */
 namespace Lou117\Core\Http\Response;
 
-class RedirectResponse extends AbstractResponse
+use \InvalidArgumentException;
+
+class RedirectResponse extends EmptyResponse
 {
     /**
-     * @see AbstractResponse::$contentMimeType
+     * @var int
      */
-    protected $contentMimeType = 'text/plain';
+    protected $statusCode = 302;
 
 
-    public function __construct($body = null)
+    public function __construct($body = null, int $status_code = 302)
     {
-        $this->setStatusCode(AbstractResponse::HTTP_302);
-        $this->addHeader('Location', $body);
-    }
+        $body = (string) trim($body);
+        if (empty($body)) {
 
-    /**
-     * @see AbstractResponse::setBody()
-     * @param mixed $body - HTTP response body.
-     * @return AbstractResponse
-     */
-    public function setBody($body): AbstractResponse
-    {
-        return $this;
+            throw new InvalidArgumentException("RedirectResponse body is Location header value and cannot be empty");
+
+        }
+
+        parent::__construct($body, $status_code);
+        $this->addHeader(AbstractResponse::HTTP_HEADER_LOCATION, $body);
     }
 }

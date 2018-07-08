@@ -13,20 +13,62 @@ use \InvalidArgumentException;
 class JsonResponse extends AbstractResponse
 {
     /**
-     * @see AbstractResponse::$contentMimeType
+     * Set this static property to `true` when you want JSON to be pretty-printed.
+     * This property may only be used when debugging, as pretty-print can increase payload size.
+     *
+     * @var bool
      */
-    protected $contentMimeType = 'application/json';
+    static public $prettyPrint = false;
+
 
     /**
-     * Sets HTTP response body, forcing passed value to string type using settype().
-     * @see AbstractResponse::setBody()
-     * @see settype()
-     * @param mixed $body - HTTP response body.
-     * @return AbstractResponse
-     * @throws InvalidArgumentException - when passed value type is not array nor object
-     * @throws RuntimeException - when JSON encoding failed
+     * @see AbstractResponse::getBody()
+     * @return string
      */
-    public function setBody($body): AbstractResponse
+    public function getBody(): string
+    {
+        if (is_array($this->body) || is_object($this->body)) {
+
+            $mask = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK;
+            if (self::$prettyPrint) {
+
+                $mask = $mask | JSON_PRETTY_PRINT;
+
+            }
+
+            $return = json_encode($this->body, $mask);
+            if ($return === null) {
+
+                $error = json_last_error_msg();
+                throw new RuntimeException("JSON encoding has failed ({$error})");
+
+            }
+
+            return $return;
+
+        }
+
+        return "";
+    }
+
+    /**
+     * @see AbstractResponse::getMimetype()
+     * @return string
+     */
+    public function getMimetype(): string
+    {
+        return "application/json";
+    }
+
+    /**
+     * Sets HTTP response body.
+     *
+     * @param array|object $body
+     * @param bool $merge - If set to true, and if passed body and existing body are both of type array, passed body
+     * will be merged with existing body using array_replace_recursive.
+     * @return AbstractResponse
+     */
+    public function setBody($body, bool $merge = false): AbstractResponse
     {
         if (!is_array($body) && !is_object($body)) {
 
@@ -35,11 +77,13 @@ class JsonResponse extends AbstractResponse
 
         }
 
-        $this->body = json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if ($body === null) {
+        if (is_array($body) && is_array($this->body) && $merge) {
 
-            $error = json_last_error_msg();
-            throw new RuntimeException("JSON encoding has failed ({$error})");
+            $this->body = array_replace_recursive($this->body, $body);
+
+        } else {
+
+            $this->body = $body;
 
         }
 

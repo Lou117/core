@@ -2,23 +2,24 @@
     "name": "lou117/core",
     "description": "Lightweight and pragmatic PHP microframework",
     "type": "library",
-    "homepage": "https://github.com/lou117/core",
+    "homepage": "https://gitlab.com/lou117/core",
     "license": "MIT",
     "authors": [
         {
             "name": "Sylvain Glaçon",
             "email": "sylvain.glacon@gmail.com",
-            "homepage": "https://github.com/lou117",
+            "homepage": "https://gitlab.com/lou117",
             "role": "Developer"
         }
     ],
     "support": {
-        "wiki": "https://github.com/Lou117/core/wiki",
-        "source": "https://github.com/Lou117/core"
+        "source": "https://gitlab.com/Lou117/core"
     },
     "require": {
-        "nikic/fast-route": "1.*",
-        "monolog/monolog": "1.*"
+        "php": "7.1.*",
+        "nikic/fast-route": "1.2.*",
+        "monolog/monolog": "1.*",
+        "guzzlehttp/psr7": "1.4.*"
     },
     "autoload": {
         "psr-4": {

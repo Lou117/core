@@ -11,29 +11,87 @@ use \LogicException;
 
 abstract class AbstractResponse
 {
-    const HTTP_PROTOCOL = 'HTTP/1.1';
+    const HTTP_HEADER_ALLOW = "Allow";
+    const HTTP_HEADER_CONTENT_TYPE = "Content-Type";
+    const HTTP_HEADER_LOCATION = "Location";
+    const HTTP_PROTOCOL = "HTTP/1.1";
 
-    const HTTP_200 = '200 OK';
-    const HTTP_201 = '201 Created';
-    const HTTP_204 = '204 No Content';
-    const HTTP_301 = '301 Moved Permanently';
-    const HTTP_302 = '302 Moved Temporarily';
-    const HTTP_303 = '303 See Other';
-    const HTTP_400 = '400 Bad Request';
-    const HTTP_401 = '401 Unauthorized';
-    const HTTP_403 = '403 Forbidden';
-    const HTTP_404 = '404 Not Found';
-    const HTTP_405 = '405 Method Not Allowed';
-    const HTTP_409 = '409 Conflict';
-    const HTTP_500 = '500 Internal Server Error';
-    const HTTP_501 = '501 Not Implemented';
-    const HTTP_503 = '503 Service Unavailable';
-    const HTTP_406 = '406 Not Acceptable';
-    const HTTP_415 = '415 Unsupported Media Type';
-    const HTTP_422 = '422 Unprocessable Entity';
 
-    const HTTP_HEADER_ALLOW = 'Allow';
-    const HTTP_HEADER_CONTENT_TYPE = 'Content-Type';
+    /**
+     * Map of standard HTTP status code/reason phrases (from Guzzle).
+     *
+     * @var array
+     */
+    protected static $phrases = [
+        100 => 'Continue',
+        101 => 'Switching Protocols',
+        102 => 'Processing',
+        200 => 'OK',
+        201 => 'Created',
+        202 => 'Accepted',
+        203 => 'Non-Authoritative Information',
+        204 => 'No Content',
+        205 => 'Reset Content',
+        206 => 'Partial Content',
+        207 => 'Multi-status',
+        208 => 'Already Reported',
+        300 => 'Multiple Choices',
+        301 => 'Moved Permanently',
+        302 => 'Found',
+        303 => 'See Other',
+        304 => 'Not Modified',
+        305 => 'Use Proxy',
+        306 => 'Switch Proxy',
+        307 => 'Temporary Redirect',
+        400 => 'Bad Request',
+        401 => 'Unauthorized',
+        402 => 'Payment Required',
+        403 => 'Forbidden',
+        404 => 'Not Found',
+        405 => 'Method Not Allowed',
+        406 => 'Not Acceptable',
+        407 => 'Proxy Authentication Required',
+        408 => 'Request Time-out',
+        409 => 'Conflict',
+        410 => 'Gone',
+        411 => 'Length Required',
+        412 => 'Precondition Failed',
+        413 => 'Request Entity Too Large',
+        414 => 'Request-URI Too Large',
+        415 => 'Unsupported Media Type',
+        416 => 'Requested range not satisfiable',
+        417 => 'Expectation Failed',
+        418 => "I'm a teapot",
+        422 => 'Unprocessable Entity',
+        423 => 'Locked',
+        424 => 'Failed Dependency',
+        425 => 'Unordered Collection',
+        426 => 'Upgrade Required',
+        428 => 'Precondition Required',
+        429 => 'Too Many Requests',
+        431 => 'Request Header Fields Too Large',
+        451 => 'Unavailable For Legal Reasons',
+        500 => 'Internal Server Error',
+        501 => 'Not Implemented',
+        502 => 'Bad Gateway',
+        503 => 'Service Unavailable',
+        504 => 'Gateway Time-out',
+        505 => 'HTTP Version not supported',
+        506 => 'Variant Also Negotiates',
+        507 => 'Insufficient Storage',
+        508 => 'Loop Detected',
+        511 => 'Network Authentication Required',
+    ];
+
+    /**
+     * @var int
+     */
+    protected $statusCode = 200;
+
+    /**
+     * @var string
+     */
+    protected $reasonPhrase = "";
 
 
     /**
@@ -42,24 +100,15 @@ abstract class AbstractResponse
     protected $body;
 
     /**
-     * @var string
-     */
-    protected $contentMimeType;
-
-    /**
      * @var array
      */
     protected $headers = [];
 
-    /**
-     * @var string
-     */
-    protected $statusCode = self::HTTP_200;
 
-
-    public function __construct($body = null)
+    public function __construct($body = null, int $status_code = 200)
     {
-        if (!empty($body)) {
+        $this->setStatus($status_code);
+        if ($body !== null) {
 
             $this->setBody($body);
 
@@ -68,6 +117,7 @@ abstract class AbstractResponse
 
     /**
      * Adds an header to HTTP response.
+     *
      * @param string $header_name - name of HTTP header to add to HTTP response.
      * @param string $header_value - value for HTTP header.
      * @return AbstractResponse
@@ -79,57 +129,83 @@ abstract class AbstractResponse
     }
 
     /**
-     * Applies passed HTTP status code and body, and sends HTTP response to standard output (by calling header() and
-     * echo()). This method is automatically called by Core::boot() method.
-     * @see Core::boot()
-     * @see AbstractResponse::setStatusCode()
-     * @see AbstractResponse::setBody()
-     * @param string|null $status_code - optional, see AbstractResponse::setStatusCode()
-     * @param null $body - optional, see AbstractResponse::setBody()
-     * @return AbstractResponse
+     * Returns HTTP response body as a string.
+     *
+     * @return string
      */
-    public function send(string $status_code = null, $body = null): AbstractResponse
+    public function getBody(): ?string
     {
-        if (!empty($status_code)) {
+        return $this->body;
+    }
 
-            $this->setStatusCode($status_code);
+    /**
+     * Returns HTTP response body charset.
+     * Defaults to "utf-8".
+     *
+     * @return string
+     */
+    public function getCharset(): string
+    {
+        return "utf-8";
+    }
+
+    /**
+     * Returns response MIME type.
+     *
+     * @return string
+     */
+    abstract public function getMimetype(): string;
+
+    /**
+     * Applies passed HTTP status code and body, and sends HTTP response to standard output (by calling header() and
+     * echo()).
+     * This method is automatically called by Core.
+     *
+     * @see Core::boot()
+     */
+    public function send()
+    {
+        if (!headers_sent()) {
+
+            $this->sendHeaders();
 
         }
 
-        if ($body !== null) {
+        if ($this->body !== null) {
 
-            $this->setBody($body);
-
-        }
-
-        if (headers_sent()) {
-
-            echo $this->body;
+            echo $this->getBody();
 
         }
-
-        $this->sendHeaders();
-
-        echo $this->body;
-
-        return $this;
     }
 
     /**
      * Sends HTTP response headers.
+     *
      * @return AbstractResponse
      */
     protected function sendHeaders(): AbstractResponse
     {
-        if (empty($this->contentMimeType)) {
+        header(self::HTTP_PROTOCOL." {$this->statusCode} {$this->reasonPhrase}");
+        if ($this->body !== null) {
 
-            throw new LogicException('Response body MIME type must be set by overriding AbstractResponse::contentMimeType property');
+            $mimeType = $this->getMimetype();
+            if (empty($mimeType)) {
+
+                throw new LogicException("Response body MIME type cannot be empty");
+
+            }
+
+            $charset = $this->getCharset();
+            if (empty($charset)) {
+
+                throw new LogicException("Response body charset cannot be empty");
+
+            }
+
+            $this->headers[self::HTTP_HEADER_CONTENT_TYPE] = "{$mimeType};charset={$charset}";
 
         }
 
-        $this->headers[self::HTTP_HEADER_CONTENT_TYPE] = $this->contentMimeType;
-
-        header(self::HTTP_PROTOCOL . ' ' . $this->statusCode);
         foreach ($this->headers as $header_name => $header_value) {
 
             header($header_name.': '.$header_value);
@@ -140,26 +216,31 @@ abstract class AbstractResponse
     }
 
     /**
-     * Sets HTTP response body. This method is responsible for preventing any incompatibility between passed value and
-     * final body format (for ex. passing a string for a JSON formatted response), by throwing an exception (e.g.
-     * LogicException) or implementing (and documenting) some fallback behavior.
+     * Sets HTTP response body.
+     *
      * @param mixed $body - HTTP response body.
      * @return AbstractResponse
      */
     abstract public function setBody($body): AbstractResponse;
 
     /**
-     * Sets HTTP response status code. Response status code will be defaulting to "200 OK" if not overwritten using this
-     * method.
-     * @param string $status_code - AbstractResponse class exposes some of the most common status code via
-     * AbstractResponse::HTTP_* constants, which can be use as parameter for this method. If you're not using one of
-     * AbstractResponse::HTTP_* constants, ensure the value you pass starts with HTTP code followed by message
-     * ("206 Partial Content").
+     * Sets HTTP response status code.
+     * Response status code will be defaulting to "200 OK" if not overwritten using this method.
+     *
+     * @param int $status_code - HTTP status code.
+     * @param string $reason_phrase - HTTP reason phrase.
      * @return AbstractResponse
      */
-    public function setStatusCode(string $status_code): AbstractResponse
+    public function setStatus(int $status_code, string $reason_phrase = ""): AbstractResponse
     {
-        $this->statusCode = $status_code;
+        $this->statusCode = (int) $status_code;
+        if ($reason_phrase == "" && isset(self::$phrases[$this->statusCode])) {
+
+            $reason_phrase = self::$phrases[$this->statusCode];
+
+        }
+
+        $this->reasonPhrase = $reason_phrase;
         return $this;
     }
 }
