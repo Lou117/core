@@ -7,6 +7,8 @@
  */
 namespace Lou117\Core;
 
+use \Exception;
+use \LogicException;
 use Lou117\Core\Container\Container;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -60,12 +62,25 @@ class RequestHandler implements RequestHandlerInterface
             $route = $this->container->get("route");
 
             $controllerData = explode("::", $route->controller);
+            $controllerClass = $controllerData[0];
+            $controllerMethod = $controllerData[1];
 
             /**
              * @var $controller AbstractController
              */
-            $controller = new $controllerData[0]($this->container);
-            $response = $controller->run($controllerData[1]);
+            $controller = new $controllerClass($this->container);
+            if (method_exists($controller, $controllerMethod) === false) {
+
+                throw new Exception("Method {$controllerMethod} declared in routes doesn't exists in {$controllerClass}");
+
+            }
+
+            $response = $controller->{$controllerMethod}();
+            if (($response instanceof ResponseInterface) === false) {
+
+                throw new LogicException("Method {$controllerMethod} must return an instance of PSR-7 ResponseInterface");
+
+            }
 
         }
 
