@@ -44,7 +44,7 @@ class RequestHandler implements RequestHandlerInterface
         /**
          * @var $controller AbstractController
          */
-        $controller = new $controllerData[0]($this);
+        $controller = new $controllerData[0]($this->container);
         return $controller->run($controllerData[1]);
     }
 }

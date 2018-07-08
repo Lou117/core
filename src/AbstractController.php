@@ -10,11 +10,12 @@ namespace Lou117\Core;
 
 use \Exception;
 use \LogicException;
+use Lou117\Core\Container\Container;
 use Psr\Http\Message\ResponseInterface;
 
 abstract class AbstractController
 {
-    public function __construct(Core $core_instance)
+    public function __construct(Container $core_container)
     {
 
     }
