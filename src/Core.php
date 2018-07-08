@@ -45,6 +45,8 @@ class Core
      */
     public function __construct(string $settings_filepath, string $routing_table_filepath)
     {
+        $this->container = new Container();
+
         $this->loadSettings($settings_filepath);
         $this->initLogger();
         $this->loadRoutingTable($routing_table_filepath);
