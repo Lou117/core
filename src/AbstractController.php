@@ -9,7 +9,7 @@
 namespace Lou117\Core;
 
 use \Exception;
-use Lou117\Core\Http\Response\AbstractResponse;
+use Psr\Http\Message\ResponseInterface;
 
 abstract class AbstractController
 {
@@ -22,10 +22,10 @@ abstract class AbstractController
      * AbstractController method called by Core.
      *
      * @param $controller_method
-     * @return AbstractResponse
+     * @return ResponseInterface
      * @throws Exception
      */
-    public function run($controller_method): AbstractResponse
+    public function run($controller_method): ResponseInterface
     {
         if (method_exists($this, $controller_method) === false) {
 

@@ -10,7 +10,7 @@ namespace Lou117\Core\Exception;
 
 use \Exception;
 
-class SettingsInvalidException extends Exception
+class InvalidSettingsException extends Exception
 {
     /**
      * @see Exception::$message
