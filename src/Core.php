@@ -27,11 +27,6 @@ class Core
     protected $container;
 
     /**
-     * @var FastRoute\Dispatcher
-     */
-    protected $router;
-
-    /**
      * @var Route[]
      */
     protected $routes = [];
@@ -67,7 +62,7 @@ class Core
          */
         $request = $this->container->get("request");
 
-        $routerResult = $this->router->dispatch($request->getMethod(), $request->getUri()->getPath());
+        $routerResult = $this->container->get("router")->dispatch($request->getMethod(), $request->getUri()->getPath());
         if ($routerResult[0] === FastRoute\Dispatcher::NOT_FOUND) {
 
             return new Response(404);
@@ -203,7 +198,7 @@ class Core
 
         $this->routes = $routes;
 
-        $this->router = $function(function(FastRoute\RouteCollector $r) use ($routes) {
+        $this->container->set("router", $function(function(FastRoute\RouteCollector $r) use ($routes) {
 
             /**
              * @var Route $routeObject
@@ -214,7 +209,7 @@ class Core
 
             }
 
-        }, $params);
+        }, $params));
 
         return $this;
     }
