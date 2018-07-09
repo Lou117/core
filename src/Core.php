@@ -253,6 +253,8 @@ class Core
                 $response = $dispatchResult;
                 ResponseFactory::sendToClient($response);
 
+                die();
+
             }
 
             $requestHandler = new RequestHandler($this->container);
