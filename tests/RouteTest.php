@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class RouteTest extends TestCase
 {
-    public function testRouteInstantiationDoesNotExpectParameter()
+    public function testRouteInstantiation()
     {
         $route = new Route();
         $this->assertInstanceOf(Route::class, $route);
@@ -19,7 +19,7 @@ class RouteTest extends TestCase
 
     /**
      * @param Route $route
-     * @depends testRouteInstantiationHasNoParameter
+     * @depends testRouteInstantiation
      */
     public function testRouteAttributes(Route $route)
     {

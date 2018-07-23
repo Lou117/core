@@ -49,15 +49,12 @@ class ResponseFactoryTest extends TestCase
 
     /**
      * @expectedException InvalidArgumentException
+     * @requires function imagecreate
      */
     public function testCreateJsonResponseWithInvalidJson()
     {
-        if (function_exists("imagecreate")) {
-
-            $resource = imagecreate(16, 16);
-            ResponseFactory::createJsonResponse($resource);
-
-        } else echo "Cannot test response with invalid JSON, imagecreate() function does not exists (missing GD ?)";
+        $resource = imagecreate(16, 16);
+        ResponseFactory::createJsonResponse($resource);
     }
 
     public function testCreateTextResponse()

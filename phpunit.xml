@@ -1,0 +1,9 @@
+<phpunit bootstrap="vendor/autoload.php">
+    <testsuites>
+        <testsuite name="Core">
+            <file>tests/RouteTest.php</file>
+            <file>tests/ResponseFactoryTest.php</file>
+            <file>tests/CoreTest.php</file>
+        </testsuite>
+    </testsuites>
+</phpunit>

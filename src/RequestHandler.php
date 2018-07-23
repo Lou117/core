@@ -7,8 +7,9 @@
  */
 namespace Lou117\Core;
 
-use \Exception;
 use \LogicException;
+use \RuntimeException;
+use \BadMethodCallException;
 use Lou117\Core\Container\Container;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -42,7 +43,10 @@ class RequestHandler implements RequestHandlerInterface
 
     /**
      * {@inheritdoc}
-     * @throws \Exception
+     * @return ResponseInterface
+     * @throws RuntimeException
+     * @throws BadMethodCallException
+     * @throws LogicException
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -58,16 +62,28 @@ class RequestHandler implements RequestHandlerInterface
             $route = $this->container->get("route");
 
             $controllerData = explode("::", $route->controller);
+            if (count($controllerData) !== 2) {
+
+                throw new RuntimeException("Invalid controller declaration for route {$route->name} (expecting '\\Namespace\\Class::method' format)");
+
+            }
+
             $controllerClass = $controllerData[0];
-            $controllerMethod = $controllerData[1];
+            if (class_exists($controllerClass) === false) {
+
+                throw new RuntimeException("Invalid controller declaration for route {$route->name} (unknown class {$controllerClass})");
+
+            }
 
             /**
              * @var $controller AbstractController
              */
             $controller = new $controllerClass($this->container);
+
+            $controllerMethod = $controllerData[1];
             if (method_exists($controller, $controllerMethod) === false) {
 
-                throw new Exception("{$controllerClass}::{$controllerMethod} declared in routes doesn't exists in {$controllerClass}");
+                throw new BadMethodCallException("{$controllerClass}::{$controllerMethod} declared in routes doesn't exists in {$controllerClass}");
 
             }
 

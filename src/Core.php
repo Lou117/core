@@ -275,26 +275,38 @@ class Core
 
     /**
      * Core main method, to be called by entry script.
+     * @param bool $return_response - if set to TRUE, generated ResponseInterface will be returned instead of being sent
+     * to client and script being die()-ed. Mostly for testing purposes, but this behavior can be useful if front
+     * controller is rewritten and some logic added before any response being sent.
      * @throws Exception
+     * @return ResponseInterface
      */
-    public function run()
+    public function run(bool $return_response = false)
     {
         try {
 
             $dispatchResult = $this->dispatch();
-            if ($dispatchResult instanceof ResponseInterface) {
+            if ($dispatchResult instanceof ResponseInterface) { // 404 Not Found or 405 Not Allowed
 
                 $response = $dispatchResult;
-                ResponseFactory::sendToClient($response);
 
-                die();
+            } else {
+
+                $requestHandler = new RequestHandler($this->container);
+                $response = $requestHandler->handle($this->container->get("request"));
 
             }
 
-            $requestHandler = new RequestHandler($this->container);
-            ResponseFactory::sendToClient($requestHandler->handle($this->container->get("request")));
+            if ($return_response === false) {
 
-            die();
+                ResponseFactory::sendToClient($response);
+                die();
+
+            } else {
+
+                return $response;
+
+            }
 
         } catch (Exception $e) {
 
