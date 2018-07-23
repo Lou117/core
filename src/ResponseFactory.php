@@ -9,8 +9,8 @@ namespace Lou117\Core;
 
 use GuzzleHttp\Psr7\Response;
 use \InvalidArgumentException;
-use function GuzzleHttp\Psr7\stream_for;
 use Psr\Http\Message\ResponseInterface;
+use function GuzzleHttp\Psr7\stream_for;
 
 class ResponseFactory
 {
@@ -19,8 +19,8 @@ class ResponseFactory
 
     /**
      * Creates an HTML response (with Content-Type header set to "text/html").
-     * @param string $body - Response body. If trim()-ed body is an empty string, neither Content-Type header nor body will be
-     * added to returned response.
+     * @param string $body - Response body. If trim()-ed body is an empty string, neither Content-Type header nor body
+     * will be added to returned response.
      * @param int $status - Response status (defaults to 200).
      * @return ResponseInterface
      */
@@ -49,7 +49,7 @@ class ResponseFactory
     public static function createJsonResponse($body, int $status = 200): ResponseInterface
     {
         $encodedBody = json_encode($body);
-        if ($encodedBody === null) {
+        if ($encodedBody === false) {
 
             throw new InvalidArgumentException("Given body cannot be encoded to JSON");
 
@@ -99,7 +99,7 @@ class ResponseFactory
      * @param int $status - Response status (defaults to 200).
      * @return ResponseInterface
      */
-    public static function createTextResponse($body, int $status = 200): ResponseInterface
+    public static function createTextResponse(string $body, int $status = 200): ResponseInterface
     {
         $response = new Response($status);
         if (strlen(trim($body)) > 0) {

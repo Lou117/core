@@ -37,6 +37,7 @@ class RequestHandler implements RequestHandlerInterface
     {
         $this->container = $core_container;
         $this->middlewareSequence = $this->container->get("settings")["mw-sequence"];
+        reset($this->middlewareSequence);
     }
 
     /**
@@ -48,13 +49,8 @@ class RequestHandler implements RequestHandlerInterface
         $middleware = current($this->middlewareSequence);
         next($this->middlewareSequence);
 
-        if ($middleware instanceof MiddlewareInterface) {
-
-            $response = $middleware->process($request, $this);
-
-        }
-
-        if (!isset($response)) {
+        // If middleware sequence is exhausted, controller is instantiated and run.
+        if (($middleware instanceof MiddlewareInterface) === false) {
 
             /**
              * @var Route $route
@@ -71,10 +67,13 @@ class RequestHandler implements RequestHandlerInterface
             $controller = new $controllerClass($this->container);
             if (method_exists($controller, $controllerMethod) === false) {
 
-                throw new Exception("Method {$controllerMethod} declared in routes doesn't exists in {$controllerClass}");
+                throw new Exception("{$controllerClass}::{$controllerMethod} declared in routes doesn't exists in {$controllerClass}");
 
             }
 
+            /**
+             * @var $response ResponseInterface
+             */
             $response = $controller->{$controllerMethod}();
             if (($response instanceof ResponseInterface) === false) {
 
@@ -82,8 +81,8 @@ class RequestHandler implements RequestHandlerInterface
 
             }
 
-        }
+            return $response;
 
-        return $response;
+        } else return $middleware->process($request, $this);
     }
 }

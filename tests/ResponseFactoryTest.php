@@ -25,6 +25,15 @@ class ResponseFactoryTest extends TestCase
         $this->assertEquals($code, $response->getStatusCode());
     }
 
+    public function testCreateHtmlResponseWithEmptyString()
+    {
+        $response = ResponseFactory::createTextResponse("\n\t  ");
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+
+        $this->assertFalse($response->hasHeader("Content-Type"));
+        $this->assertEmpty($response->getBody()->read($response->getBody()->getSize()));
+    }
+
     public function testCreateJsonResponse()
     {
         $code = 201;
@@ -36,6 +45,19 @@ class ResponseFactoryTest extends TestCase
         $this->assertEquals("application/json", $response->getHeaderLine("Content-Type"));
         $this->assertEquals($json, json_decode($response->getBody()->read($response->getBody()->getSize()), true));
         $this->assertEquals($code, $response->getStatusCode());
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testCreateJsonResponseWithInvalidJson()
+    {
+        if (function_exists("imagecreate")) {
+
+            $resource = imagecreate(16, 16);
+            ResponseFactory::createJsonResponse($resource);
+
+        } else echo "Cannot test response with invalid JSON, imagecreate() function does not exists (missing GD ?)";
     }
 
     public function testCreateTextResponse()
@@ -51,6 +73,15 @@ class ResponseFactoryTest extends TestCase
         $this->assertEquals($code, $response->getStatusCode());
     }
 
+    public function testCreateTextResponseWithEmptyString()
+    {
+        $response = ResponseFactory::createTextResponse("\n\t  ");
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+
+        $this->assertFalse($response->hasHeader("Content-Type"));
+        $this->assertEmpty($response->getBody()->read($response->getBody()->getSize()));
+    }
+
     public function testCreateRedirectResponse()
     {
         $location = "https://google.com";
@@ -60,6 +91,14 @@ class ResponseFactoryTest extends TestCase
 
         $this->assertEquals($location, $response->getHeaderLine("Location"));
         $this->assertEquals(302, $response->getStatusCode());
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testCreateRedirectResponseWithEmptyLocation()
+    {
+        ResponseFactory::createRedirectResponse("");
     }
 
     public function testIsEmptyResponse()

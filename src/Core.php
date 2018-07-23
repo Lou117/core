@@ -4,6 +4,7 @@ namespace Lou117\Core;
 use FastRoute;
 use \Exception;
 use Monolog\Logger;
+use \LogicException;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use Lou117\Core\Container\Container;
@@ -52,29 +53,60 @@ class Core
     /**
      * Run FastRoute router.
      *
-     * @return ResponseInterface|bool - Returns true or a ready-to-use instance of EmptyResponse with HTTP code set
-     * if no result was found (404) or if a route was found but HTTP method is not allowed (405).
+     * @return ResponseInterface|bool - Returns true or a ready-to-use instance of ResponseInterface.
+     * If 'httpNotFoundResponse' is a FCQN in Core settings, given class will be used instead of an empty Response class
+     * with HTTP status set to 404.
+     * If 'httpNotAllowedResponse' is a FCQN in Core settings, given class will be used instead of an empty Response
+     * class with 'Allowed' header set to allowed methods and HTTP status set to 405.
      */
     protected function dispatch()
     {
         /**
          * @var $request ServerRequest
+         * @var $settings array
          */
         $request = $this->container->get("request");
+        $settings = $this->container->get("settings");
 
         $routerResult = $this->container->get("router")->dispatch($request->getMethod(), $request->getUri()->getPath());
         if ($routerResult[0] === FastRoute\Dispatcher::NOT_FOUND) {
 
-            return new Response(404);
+            if (class_exists($settings["httpNotFoundResponse"])) {
+
+                $response = new $settings["httpNotFoundResponse"]();
+                if (($response instanceof ResponseInterface) === false) {
+
+                    throw new LogicException("{$settings["httpNotFoundResponse"]} class must be implementing ResponseInterface");
+
+                }
+
+                return $response;
+
+            } else return new Response(404);
 
         }
 
         if ($routerResult[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
 
-            $allowedMethodsAsString = implode(', ', $routerResult[1]);
-            return new Response(405, [
-                ResponseFactory::HTTP_HEADER_ALLOW => $allowedMethodsAsString
-            ]);
+            if (class_exists($settings["httpNotAllowedResponse"])) {
+
+                $response = new $settings["httpNotAllowedResponse"]($routerResult[1]);
+                if (($response instanceof ResponseInterface) === false) {
+
+                    throw new LogicException("{$settings["httpNotAllowedResponse"]} class must be implementing ResponseInterface");
+
+                }
+
+                return $response;
+
+            } else {
+
+                $allowedMethodsAsString = implode(', ', $routerResult[1]);
+                return new Response(405, [
+                    ResponseFactory::HTTP_HEADER_ALLOW => $allowedMethodsAsString
+                ]);
+
+            }
 
         }
 
@@ -103,6 +135,8 @@ class Core
                 "enabled" => true,
                 "cache" => "var/cache/fastroute"
             ],
+            "httpNotFoundResponse" => null,
+            "httpNotAllowedResponse" => null
         ], $loaded_settings);
     }
 
