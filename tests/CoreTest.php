@@ -37,12 +37,19 @@ class CoreTest extends TestCase
                         'mw-sequence' => [
                             new TestMiddlewareFoo(),
                             new TestMiddlewareBar()
+                        ],
+                        'logger' => [
+                            'class' => ['Monolog\Handler\RotatingFileHandler', ['/tmp/log', 1]]
                         ]
                     ] ?>");
 
                 } else {
 
-                    fwrite($settingsFile, "<?php return [] ?>");
+                    fwrite($settingsFile, "<?php return [
+                        'logger' => [
+                            'class' => ['Monolog\Handler\RotatingFileHandler', ['/tmp/log', 1]]
+                        ]
+                    ] ?>");
 
                 }
 
