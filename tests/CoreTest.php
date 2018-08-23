@@ -35,8 +35,8 @@ class CoreTest extends TestCase
 
                     fwrite($settingsFile, "<?php return [
                         'mw-sequence' => [
-                            new TestMiddlewareFoo(),
-                            new TestMiddlewareBar()
+                            TestMiddlewareFoo::class,
+                            TestMiddlewareBar::class
                         ],
                         'logger' => [
                             'class' => ['Monolog\Handler\RotatingFileHandler', ['/tmp/log', 1]]

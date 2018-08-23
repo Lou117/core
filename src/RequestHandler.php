@@ -50,11 +50,11 @@ class RequestHandler implements RequestHandlerInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $middleware = current($this->middlewareSequence);
+        $middlewareEntry = current($this->middlewareSequence);
         next($this->middlewareSequence);
 
         // If middleware sequence is exhausted, controller is instantiated and run.
-        if (($middleware instanceof MiddlewareInterface) === false) {
+        if ($middlewareEntry === false) {
 
             /**
              * @var Route $route
@@ -99,6 +99,23 @@ class RequestHandler implements RequestHandlerInterface
 
             return $response;
 
-        } else return $middleware->process($request, $this);
+        } else {
+
+            $middlewareFQCN = is_array($middlewareEntry) ? $middlewareEntry[0] : $middlewareEntry;
+            $middlewareParams = is_array($middlewareEntry) && count($middlewareEntry) > 1 ? $middlewareEntry[1] : null;
+
+            /**
+             * @var $middleware MiddlewareInterface
+             */
+            $middleware = new $middlewareFQCN($middlewareParams);
+            if (($middleware instanceof MiddlewareInterface) === false) {
+
+                throw new LogicException("Middleware {$middlewareFQCN} must implements PSR-11 MiddlewareInterface");
+
+            }
+
+            return $middleware->process($request, $this);
+
+        }
     }
 }
