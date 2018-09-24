@@ -35,8 +35,8 @@ class CoreTest extends TestCase
 
                     fwrite($settingsFile, "<?php return [
                         'mw-sequence' => [
-                            new TestMiddlewareFoo(),
-                            new TestMiddlewareBar()
+                            TestMiddlewareFoo::class,
+                            TestMiddlewareBar::class
                         ],
                         'logger' => [
                             'class' => ['Monolog\Handler\RotatingFileHandler', ['/tmp/log', 1]]
@@ -185,8 +185,8 @@ class CoreTest extends TestCase
         $this->assertTrue(is_array($container->get("settings")));
         $this->assertNotEmpty($container->get("settings"));
 
-        $this->assertInstanceOf(Logger::class, $container->get("logger"));
-        $this->assertTrue(count($container->get("logger")->getHandlers()) > 0);
+        $this->assertInstanceOf(Logger::class, $container->get("core-logger"));
+        $this->assertTrue(count($container->get("core-logger")->getHandlers()) > 0);
 
         $this->assertInstanceOf(Dispatcher::class, $container->get("router"));
 

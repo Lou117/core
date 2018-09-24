@@ -1,129 +1,27 @@
-# *Core* is a lightweight and pragmatic PHP microframework
-*Core* is a very personal view on what a microframework should be. Designed to be ready for duty out of the box, it is
-designed to do the painful parts, and let you be creative for the rest.
-## General design
-*Core* makes no assumptions on how your application is organised. All you need to do is instantiate Core class into your 
-front controller, providing with a few settings and a routing table, and you'll be all set.
-## Install
-*Core* comes with a basic implementation as a package in Packagist: 
-```
-composer create-project lou117/core-skeleton
-```
-Please find all setup instructions here: [https://gitlab.com/Lou117/core-skeleton]()
-## Usage
-Instantiates `Core` with your front-controller, passing both configuration file path and routing table file path as 
-constructor arguments, and simply call `Core::run()` method.
-```$php
-$core = new Core("path/to/your/config/file.php", "path/to/your/routing/table.php");
-$core->run();
-```
-## *Core* settings
-You can use, and you will most probably be using, your own configuration file to override *Core* default settings. 
-*Core* has very few settings available, mostly attached to *Monolog* (for logging purposes, see 
-[https://seldaek.github.io/monolog/]()) and *FastRoute* (for routing purposes, see 
-[https://github.com/nikic/FastRoute]()).
-```$php
-// path/to/your/config/file.php
+# You're about to discover *Core* microframework !
+*Core* microframework gathers some state-of-the-art PHP recommendations and components ensuring that all painful parts 
+of any PHP application are done "the right way". It's up to you to be creative for the rest.
+## *Core* is an assembly
+*Core* implements and assembles some PHP recommendations and popular components:
+- Monolog library ([https://seldaek.github.io/monolog/]()) for PSR-3 compliant logging;
+- Guzzle PSR-7 implementation ([https://github.com/guzzle/psr7]()) for server request and response streamlining;
+- FastRoute library ([https://github.com/nikic/FastRoute]()) for request routing;
+- PSR-15 (HTTP Server Request Handlers) for middleware implementation;
+- PSR-11 (Container Interface) added to *Core* `RequestHandlerInterface` implementation.
 
-return [
-    "log" => [
-        "channel" => "core",
-        "class" => ["Monolog\Handler\RotatingFileHandler", ["var/log/log", 10]]
-    ],
-    "routerCachePath" => "var/cache/fastroute"
-];
-```
-- `log.channel`: is determining log channel name ;
-- `log.class`: is an indexed array where first value is *Monolog* handler FQCN, and second value is an array of 
-parameters for handler instantiation ;
-- `routerCachePath`: full path to *FastRoute* cache file. If given path is not a writable file, *FastRoute* caching will 
-be disabled.
-
-*Core* has all of its default settings hard-coded, so PHP array returned by your configuration file can be completely 
-empty. However, feel free to override using your configuration file at *Core* instantiation. Anything else you will add 
-to your configuration file will be left untouched and wille be fully accessible down the way to controllers.
-## *Core* routing
-For routing logic, *Core* is using *FastRoute* ([https://github.com/nikic/FastRoute]()). *Core* expects your routing 
-table to be formatted as an associative array, where keys are route names, and values are associative arrays:
-```$php
-// path/to/your/routing/table.php
-
-return [
-    "ping": [
-        "methods": ["GET"],
-        "endpoint": "/ping",
-        "controller": "Your\Own\ExampleController::yourFancyMethod"
-    ]
-];
-```
-For each route:
-- `methods`: is an indexed array where all allowed methods are listed;
-- `endpoint`: is the route URL;
-- `controller`: is your controller FQCN and method.
-
-All these three key-value pairs are mandatory for any route to be a valid one. A fourth key-value pair can be added, 
-giving default arguments to routes that have arguments:
-```$php
-// path/to/your/routing/table.php
-
-return [
-    "ping": [
-        "methods": ["GET"],
-        "endpoint": "/blog/page/{page_number}",
-        "controller": "Your\Own\ExampleController::yourFancyMethod",
-        "arguments": [
-            "page_number": "1"
-        ]
-    ]
-];
-```
-Please note that any other key-value pair you will be adding to a route declaration will be fully accessible down the 
-way to controllers, under `Lou117\Core\Route::arguments` public property.
-## Controllers
-In order for *Core* to automatically instantiates and run them, controllers must extend `Lou117\Core\AbstractController` 
-class. All you need is to implement the method you declared in your routing table ; this method must return an instance 
-of any class extending `Lou117\Core\Http\Response\AbstractResponse`.
-```$php
-// ExampleController.php
-namespace Your\Own;
-
-use Lou117\Core\AbstractController;
-
-class ExampleController extends AbstractController
-{
-    public function yourFancyMethod(): AbstractResponse
-    {
-        return new TextResponse("Hello World!");
-    }
-}
-```
-## Extending *Core* `AbstractController` class
-In almost every case, you will need to implement your own `AbstractController` class, extending default *Core* class.
-```$php
-// AbstractController.php
-namespace Your\Own;
-
-use Lou117\Core\AbstractController as CoreAbstractController;
-
-class AbstractController extends CoreAbstractController
-{
-    public function __construct(Core $core_instance)
-    {
-    
-    }
-    
-    public function run(string $controller_method): AbstractResponse
-    {
-        parent::run($controller_method);
-    }
-}
-``` 
-By re-implementing `AbstractController::__construct()` method, you can use the `Core` instance given as only parameter 
-to initialize anything you need before any endpoint-specific logic. You will most probably want to "transfer" incoming 
-request object (which is a Guzzle PSR-7 `ServerRequest` object) from `Core` instance to your `AbstractController` class, 
-and do the same with *Core* logger and *Core* settings. Feel free.
-
-By re-implementing `AbstractController::run()` method, you can execute any code that must be executed with every HTTP 
-request but depends on computed route. By implementing this method as a *middleware*, you can add some logic before and 
-after any endpoint-specific logic, adding conditions to execution or applying some processing to the `AbstractResponse` 
-instance returned by endpoint-specific logic.
+As such, *Core* is very lightweight, as it implements two of the simplest PSR recommendations ; delegating logging, 
+routing, server request and server response building to renowned and bullet-proof libraries what are Monolog, Guzzle and 
+FastRoute.
+## What do I do with *Core* ?
+Whatever you want, from HTTP APIs to websites. *Core* architecture makes no assumption on what you'll gonna build with 
+it, it just provide you with some tools easing your way to the fun part of your project: actually coding what will make 
+it great, not the boilerplate part.
+## Where do I begin ?
+Download *Core* skeleton application using [Composer](https://getcomposer.org/) 
+(`composer create-project lou117/core-skeleton`): a tutorial will help you through your journey, if you need it !
+# *Core* documentation
+- [Request lifecycle in *Core*](doc/request_lifecycle.md)
+- [Settings syntax and usage](doc/settings.md)
+- [Routing table syntax and usage](doc/routing.md)
+- [Understanding PSR-15 implementation](doc/psr-15_implementation.md)
+- [Adding controllers](doc/controllers.md)

@@ -4,6 +4,7 @@
             <file>tests/RouteTest.php</file>
             <file>tests/ResponseFactoryTest.php</file>
             <file>tests/CoreTest.php</file>
+            <file>tests/ContainerTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

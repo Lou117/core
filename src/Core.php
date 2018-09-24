@@ -54,9 +54,9 @@ class Core
      * Run FastRoute router.
      *
      * @return ResponseInterface|bool - Returns true or a ready-to-use instance of ResponseInterface.
-     * If 'httpNotFoundResponse' is a FCQN in Core settings, given class will be used instead of an empty Response class
+     * If 'httpNotFoundResponse' is a FQCN in Core settings, given class will be used instead of an empty Response class
      * with HTTP status set to 404.
-     * If 'httpNotAllowedResponse' is a FCQN in Core settings, given class will be used instead of an empty Response
+     * If 'httpNotAllowedResponse' is a FQCN in Core settings, given class will be used instead of an empty Response
      * class with 'Allowed' header set to allowed methods and HTTP status set to 405.
      */
     protected function dispatch()
@@ -71,42 +71,36 @@ class Core
         $routerResult = $this->container->get("router")->dispatch($request->getMethod(), $request->getUri()->getPath());
         if ($routerResult[0] === FastRoute\Dispatcher::NOT_FOUND) {
 
-            if (class_exists($settings["httpNotFoundResponse"])) {
+            $response = class_exists($settings["httpNotFoundResponse"])
+                ? new $settings["httpNotFoundResponse"]()
+                : new Response();
 
-                $response = new $settings["httpNotFoundResponse"]();
-                if (($response instanceof ResponseInterface) === false) {
+            if (($response instanceof ResponseInterface) === false) {
 
-                    throw new LogicException("{$settings["httpNotFoundResponse"]} class must be implementing ResponseInterface");
+                throw new LogicException("{$settings["httpNotFoundResponse"]} class must be implementing ResponseInterface");
 
-                }
+            }
 
-                return $response;
-
-            } else return new Response(404);
+            $response = $response->withStatus(404);
+            return $response;
 
         }
 
         if ($routerResult[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
 
-            if (class_exists($settings["httpNotAllowedResponse"])) {
+            $response = class_exists($settings["httpNotAllowedResponse"])
+                ? new $settings["httpNotAllowedResponse"]()
+                : new Response();
 
-                $response = new $settings["httpNotAllowedResponse"]($routerResult[1]);
-                if (($response instanceof ResponseInterface) === false) {
+            if (($response instanceof ResponseInterface) === false) {
 
-                    throw new LogicException("{$settings["httpNotAllowedResponse"]} class must be implementing ResponseInterface");
-
-                }
-
-                return $response;
-
-            } else {
-
-                $allowedMethodsAsString = implode(', ', $routerResult[1]);
-                return new Response(405, [
-                    ResponseFactory::HTTP_HEADER_ALLOW => $allowedMethodsAsString
-                ]);
+                throw new LogicException("{$settings["httpNotAllowedResponse"]} class must be implementing ResponseInterface");
 
             }
+
+            $response = $response->withStatus(405);
+            $response = $response->withAddedHeader(ResponseFactory::HTTP_HEADER_ALLOW, implode(', ', $routerResult[1]));
+            return $response;
 
         }
 
@@ -132,8 +126,11 @@ class Core
             ],
             "mw-sequence" => [],
             "router" => [
-                "enabled" => true,
-                "cache" => "var/cache/fastroute"
+                "prefix" => "",
+                "cache" => [
+                    "enabled" => true,
+                    "path" => "var/cache/fastroute"
+                ]
             ],
             "httpNotFoundResponse" => null,
             "httpNotAllowedResponse" => null
@@ -160,7 +157,7 @@ class Core
         $logger = new Logger($settings["logger"]["channel"]);
         $logger->pushHandler(new $settings["logger"]["class"][0](...$settings["logger"]["class"][1]));
 
-        $this->container->set("logger", $logger);
+        $this->container->set("core-logger", $logger);
         return $this;
     }
 
@@ -193,14 +190,29 @@ class Core
         ];
 
         $routes = [];
+        $prefix = $this->container->get("settings")["router"]["prefix"];
         foreach ($loadedRoutes as $routeName => $routeConfig) {
 
             $routeConfig = array_replace_recursive($defaultRouteConfig, $routeConfig);
 
+            if (empty($routeConfig["methods"])) {
+
+                $this->container->get("core-logger")->warning("Route '{$routeName}' has no method allowed and is ignored");
+                continue;
+
+            }
+
+            if (is_null($routeConfig["endpoint"]) || trim($routeConfig["endpoint"]) === "") {
+
+                $this->container->get("core-logger")->warning("Route '{$routeName}' has an empty pattern and is ignored");
+                continue;
+
+            }
+
             $route = new Route();
             $route->name = $routeName;
             $route->methods = $routeConfig["methods"];
-            $route->endpoint = $routeConfig["endpoint"];
+            $route->endpoint = $prefix.$routeConfig["endpoint"];
             $route->arguments = $routeConfig["arguments"];
             $route->controller = $routeConfig["controller"];
 
@@ -219,13 +231,13 @@ class Core
         $params = [];
 
         if (
-            (bool) $this->container->get("settings")["router"]["enabled"] === true &&
-            is_writable($this->container->get("settings")["router"]["cache"])
+            (bool) $this->container->get("settings")["router"]["cache"]["enabled"] === true &&
+            is_writable($this->container->get("settings")["router"]["cache"]["path"])
         ) {
 
             $function = 'FastRoute\cachedDispatcher';
             $params = [
-                'cacheFile' => $this->container->get("settings")["router"]["cache"]
+                'cacheFile' => $this->container->get("settings")["router"]["cache"]["path"]
             ];
 
         }
@@ -310,7 +322,7 @@ class Core
 
         } catch (Exception $e) {
 
-            $this->container->get("logger")->error($e->getMessage());
+            $this->container->get("core-logger")->error($e->getMessage());
             throw $e;
 
         }
