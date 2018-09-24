@@ -22,7 +22,7 @@ class Container implements ContainerInterface
      * When container is "protected", use of reserved ids is prohibited.
      * @var array
      */
-    protected $reservedIds = [ "logger", "request", "route", "router", "settings"];
+    protected $reservedIds = [ "core-logger", "request", "route", "router", "settings"];
 
     /**
      * Container internal array.
