@@ -50,6 +50,12 @@ class RequestHandler implements RequestHandlerInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
+        /**
+         * If request is modified by a middleware, and as ServerRequestInterface is immutable, given $request must
+         * replace current ServerRequestInterface in RequestHandler PSR-11 container.
+         */
+        $this->container->set("request", $request);
+
         $middlewareEntry = current($this->middlewareSequence);
         next($this->middlewareSequence);
 
