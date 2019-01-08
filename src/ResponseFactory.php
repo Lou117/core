@@ -48,7 +48,7 @@ class ResponseFactory
      */
     public static function createJsonResponse($body, int $status = 200): ResponseInterface
     {
-        $encodedBody = json_encode($body);
+        $encodedBody = json_encode($body, JSON_UNESCAPED_UNICODE);
         if ($encodedBody === false) {
 
             throw new InvalidArgumentException("Given body cannot be encoded to JSON");
@@ -59,7 +59,7 @@ class ResponseFactory
         if (strlen($encodedBody) > 0) {
 
             $response = $response
-                ->withHeader("Content-Type", "application/json")
+                ->withHeader("Content-Type", "application/json; charset=utf-8")
                 ->withBody(stream_for($encodedBody));
 
         }

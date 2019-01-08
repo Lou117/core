@@ -17,6 +17,7 @@
     },
     "require": {
         "php": "7.1 - 7.2",
+        "ext-json": "*",
         "psr/container": "1.0.0",
         "psr/http-server-middleware": "1.0.0",
         "nikic/fast-route": "1.2.*",
