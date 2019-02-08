@@ -8,8 +8,8 @@ use \LogicException;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use Lou117\Core\Container\Container;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Lou117\Core\Exception\InvalidSettingsException;
 use Lou117\Core\Exception\SettingsNotFoundException;
 use Lou117\Core\Exception\InvalidRoutingTableException;
@@ -34,8 +34,8 @@ class Core
 
 
     /**
-     * @param string $settings_filepath
-     * @param string $routing_table_filepath
+     * @param string $settings_filepath - Path to settings file.
+     * @param string $routing_table_filepath - Path to routing table file.
      * @throws InvalidRoutingTableException
      * @throws InvalidSettingsException
      */
@@ -51,18 +51,19 @@ class Core
     }
 
     /**
-     * Run FastRoute router.
-     *
-     * @return ResponseInterface|bool - Returns true or a ready-to-use instance of ResponseInterface.
+     * Runs FastRoute router.
+     * @return ResponseInterface|bool - Returns TRUE or a ready-to-use instance of ResponseInterface.
      * If 'httpNotFoundResponse' is a FQCN in Core settings, given class will be used instead of an empty Response class
      * with HTTP status set to 404.
      * If 'httpNotAllowedResponse' is a FQCN in Core settings, given class will be used instead of an empty Response
      * class with 'Allowed' header set to allowed methods and HTTP status set to 405.
+     * @throws LogicException - If response returned by 'httpNotFoundResponse' or 'httpNotAllowedResponse' class in
+     * settings does not implements ResponseInterface.
      */
     protected function dispatch()
     {
         /**
-         * @var $request ServerRequest
+         * @var $request RequestInterface
          * @var $settings array
          */
         $request = $this->container->get("request");
@@ -70,45 +71,36 @@ class Core
 
         $routerResult = $this->container->get("router")->dispatch($request->getMethod(), $request->getUri()->getPath());
         if ($routerResult[0] === FastRoute\Dispatcher::NOT_FOUND) {
-
             $response = class_exists($settings["httpNotFoundResponse"])
                 ? new $settings["httpNotFoundResponse"]()
                 : new Response();
 
             if (($response instanceof ResponseInterface) === false) {
-
                 throw new LogicException("{$settings["httpNotFoundResponse"]} class must be implementing ResponseInterface");
-
             }
 
             $response = $response->withStatus(404);
             return $response;
-
         }
 
         if ($routerResult[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
-
             $response = class_exists($settings["httpNotAllowedResponse"])
                 ? new $settings["httpNotAllowedResponse"]()
                 : new Response();
 
             if (($response instanceof ResponseInterface) === false) {
-
                 throw new LogicException("{$settings["httpNotAllowedResponse"]} class must be implementing ResponseInterface");
-
             }
 
             $response = $response->withStatus(405);
             $response = $response->withAddedHeader(ResponseFactory::HTTP_HEADER_ALLOW, implode(', ', $routerResult[1]));
             return $response;
-
         }
 
         $route = $this->routes[$routerResult[1]];
         $route->arguments = array_replace_recursive($route->arguments, $routerResult[2]);
 
         $this->container->set("route", $route);
-
         return true;
     }
 
@@ -163,23 +155,20 @@ class Core
 
     /**
      * Loads application routing table.
-     * @param string $routing_table_filepath
+     * @param string $routing_table_filepath - Path to routing table file.
      * @return Core
-     * @throws InvalidRoutingTableException
+     * @throws RoutingTableNotFoundException - If routing table is not found using given path.
+     * @throws InvalidRoutingTableException - If routing table file does not return an array.
      */
     protected function loadRoutingTable(string $routing_table_filepath): Core
     {
         if (file_exists($routing_table_filepath) === false) {
-
             throw new RoutingTableNotFoundException();
-
         }
 
         $loadedRoutes = require($routing_table_filepath);
         if (is_array($loadedRoutes) === false) {
-
             throw new InvalidRoutingTableException();
-
         }
 
         $defaultRouteConfig = [
@@ -192,21 +181,16 @@ class Core
         $routes = [];
         $prefix = $this->container->get("settings")["router"]["prefix"];
         foreach ($loadedRoutes as $routeName => $routeConfig) {
-
             $routeConfig = array_replace_recursive($defaultRouteConfig, $routeConfig);
 
             if (empty($routeConfig["methods"])) {
-
                 $this->container->get("core-logger")->warning("Route '{$routeName}' has no method allowed and is ignored");
                 continue;
-
             }
 
             if (is_null($routeConfig["endpoint"]) || trim($routeConfig["endpoint"]) === "") {
-
                 $this->container->get("core-logger")->warning("Route '{$routeName}' has an empty pattern and is ignored");
                 continue;
-
             }
 
             $route = new Route();
@@ -234,12 +218,10 @@ class Core
             (bool) $this->container->get("settings")["router"]["cache"]["enabled"] === true &&
             is_writable($this->container->get("settings")["router"]["cache"]["path"])
         ) {
-
             $function = 'FastRoute\cachedDispatcher';
             $params = [
                 'cacheFile' => $this->container->get("settings")["router"]["cache"]["path"]
             ];
-
         }
 
         $this->routes = $routes;
@@ -250,35 +232,29 @@ class Core
              * @var Route $routeObject
              */
             foreach ($routes as $routeObject) {
-
                 $r->addRoute($routeObject->methods, $routeObject->endpoint, $routeObject->name);
-
             }
-
         }, $params));
 
         return $this;
     }
 
     /**
-     * Loads Core settings
-     * @param string $settings_filepath
+     * Loads Core settings.
+     * @param string $settings_filepath - Path to settings file.
      * @return Core
-     * @throws InvalidSettingsException
+     * @throws SettingsNotFoundException - If settings file is not found using given path.
+     * @throws InvalidSettingsException - If settings file does not return an array.
      */
     protected function loadSettings(string $settings_filepath): Core
     {
         if (file_exists($settings_filepath) === false) {
-
             throw new SettingsNotFoundException();
-
         }
 
         $settings = require($settings_filepath);
         if (is_array($settings) === false) {
-
             throw new InvalidSettingsException();
-
         }
 
         $this->container->set("settings", $this->ensureDefaultSettings($settings));
@@ -287,59 +263,40 @@ class Core
 
     /**
      * Core main method, to be called by entry script.
-     * @param bool $return_response - if set to TRUE, generated ResponseInterface will be returned instead of being sent
-     * to client and script being die()-ed. Mostly for testing purposes, but this behavior can be useful if front
-     * controller is rewritten and some logic added before any response being sent.
+     * @param RequestInterface $request (optional, defaults to NULL) - If an instance of RequestInterface is passed,
+     * given $request will be used instead of ServerRequest created at Core instanciation. This will mostly be used by
+     * tests.
+     * @param bool $return_response (optional, defaults to FALSE) - If set to TRUE, generated ResponseInterface will be
+     * returned instead of being sent to client and script being die()-ed. Mostly for testing purposes, but this
+     * behavior can be useful if front controller is rewritten and some logic added before any response being sent.
      * @throws Exception
      * @return ResponseInterface
      */
-    public function run(bool $return_response = false)
+    public function run(RequestInterface $request = null, bool $return_response = false)
     {
         try {
 
+            if (!is_null($request)) {
+                $this->container->set("request", $request);
+            }
+
             $dispatchResult = $this->dispatch();
-            if ($dispatchResult instanceof ResponseInterface) { // 404 Not Found or 405 Not Allowed
-
-                $response = $dispatchResult;
-
-            } else {
-
+            if (!($dispatchResult instanceof ResponseInterface)) { // 404 Not Found or 405 Not Allowed
                 $requestHandler = new RequestHandler($this->container);
                 $response = $requestHandler->handle($this->container->get("request"));
-
+            } else {
+                $response = $dispatchResult;
             }
 
             if ($return_response === false) {
-
                 ResponseFactory::sendToClient($response);
                 die();
-
             } else {
-
                 return $response;
-
             }
-
         } catch (Exception $e) {
-
             $this->container->get("core-logger")->error($e->getMessage());
             throw $e;
-
         }
-    }
-
-    /**
-     * Sets an alternative request, explicitly replacing request built from server globals at Core instantiation. This
-     * method is mainly provided for testing purposes, when a mocked request must be used.
-     *
-     * Please note that this method can no longer be used after Core::run() method has been called, because of Core
-     * internal container being "protected". See Container class documentation.
-     * @param ServerRequestInterface $request
-     * @return Core
-     */
-    public function setRequest(ServerRequestInterface $request): self
-    {
-        $this->container->set("request", $request);
-        return $this;
     }
 }

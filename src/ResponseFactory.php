@@ -15,6 +15,9 @@ use function GuzzleHttp\Psr7\stream_for;
 class ResponseFactory
 {
     const HTTP_HEADER_ALLOW = "Allow";
+    const HTTP_HEADER_LOCATION = "Location";
+    const HTTP_HEADER_CONTENT_TYPE = "Content-Type";
+    const HTTP_HEADER_CONTENT_LENGTH = "Content-Length";
 
 
     /**
@@ -28,11 +31,9 @@ class ResponseFactory
     {
         $response = new Response($status);
         if (strlen(trim($body)) > 0) {
-
             $response = $response
-                ->withHeader("Content-Type", "text/html")
+                ->withHeader(self::HTTP_HEADER_CONTENT_TYPE, "text/html")
                 ->withBody(stream_for($body));
-
         }
 
         return $response;
@@ -40,7 +41,7 @@ class ResponseFactory
 
     /**
      * Creates a JSON response (with Content-Type header set to "application/json").
-     * @param $body - Response body to be encoded to JSON. If JSON encoding results in a empty string, neither
+     * @param mixed $body - Response body to be encoded to JSON. If JSON encoding results in a empty string, neither
      * Content-Type header nor body will be added to returned response.
      * @param int $status - Response status (defaults to 200).
      * @return ResponseInterface
@@ -50,18 +51,14 @@ class ResponseFactory
     {
         $encodedBody = json_encode($body, JSON_UNESCAPED_UNICODE);
         if ($encodedBody === false) {
-
             throw new InvalidArgumentException("Given body cannot be encoded to JSON");
-
         }
 
         $response = new Response($status);
         if (strlen($encodedBody) > 0) {
-
             $response = $response
-                ->withHeader("Content-Type", "application/json; charset=utf-8")
+                ->withHeader(self::HTTP_HEADER_CONTENT_TYPE, "application/json; charset=utf-8")
                 ->withBody(stream_for($encodedBody));
-
         }
 
         return $response;
@@ -76,13 +73,11 @@ class ResponseFactory
     public static function createRedirectResponse(string $location): ResponseInterface
     {
         if (empty($location)) {
-
             throw new InvalidArgumentException("Location header value cannot be empty");
-
         }
 
         $response = new Response(302);
-        return $response->withHeader("Location", $location);
+        return $response->withHeader(self::HTTP_HEADER_LOCATION, $location);
     }
 
     /**
@@ -96,19 +91,16 @@ class ResponseFactory
     {
         $response = new Response($status);
         if (strlen(trim($body)) > 0) {
-
             $response = $response
-                ->withHeader("Content-Type", "text/plain")
+                ->withHeader(self::HTTP_HEADER_CONTENT_TYPE, "text/plain")
                 ->withBody(stream_for($body));
-
         }
 
         return $response;
     }
 
     /**
-     * Returns true if the provided response must not output a body and false
-     * if the response could have a body.
+     * Returns TRUE if the provided response must not output a body and FALSE if the response could have a body.
      * @see https://tools.ietf.org/html/rfc7231
      * @param ResponseInterface $response
      * @return bool
@@ -116,9 +108,7 @@ class ResponseFactory
     public static function isEmptyResponse(ResponseInterface $response)
     {
         if (method_exists($response, 'isEmpty')) {
-
             return $response->isEmpty();
-
         }
 
         return in_array($response->getStatusCode(), [204, 205, 304]);
@@ -133,20 +123,36 @@ class ResponseFactory
         if (!headers_sent()) {
 
             foreach ($response->getHeaders() as $name => $values) {
+                $replace = false;
 
-                // A response can only have one Content-Type
-                $replace = (strcasecmp($name, "Content-Type") == 0);
-
-                foreach ($values as $value) {
-
-                    header(sprintf('%s: %s', $name, $value), $replace, $response->getStatusCode());
-
+                // Skip Content-Length header, to ensure it is sent with correct body length, if any.
+                if (strcasecmp($name, self::HTTP_HEADER_CONTENT_LENGTH)) {
+                    continue;
                 }
 
+                if (strcasecmp($name, self::HTTP_HEADER_CONTENT_TYPE)) {
+                    // A response can only have one Content-Type header
+                    $replace = true;
+
+                    // Content-Type header is sent only if response is not supposed to be empty
+                    if (self::isEmptyResponse($response)) {
+                        continue;
+                    }
+                }
+
+                foreach ($values as $value) {
+                    header(sprintf('%s: %s', $name, $value), $replace, $response->getStatusCode());
+                }
             }
 
             header(sprintf('HTTP/%s %s %s', $response->getProtocolVersion(), $response->getStatusCode(), $response->getReasonPhrase()), true, $response->getStatusCode());
 
+            if (
+                $response->getBody()->getSize() > 0
+                && !self::isEmptyResponse($response)
+            ) {
+                header(sprintf(self::HTTP_HEADER_CONTENT_LENGTH.': '.$response->getBody()->getSize(), true, $response->getStatusCode()));
+            }
         }
 
         echo $response->getBody()->getContents();

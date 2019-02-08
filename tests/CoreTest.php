@@ -63,11 +63,11 @@ class CoreTest extends TestCase
     protected function generateRoutingTableFile($create_file = true, $empty_file = false): string
     {
         $routingTableFilename = "/tmp/".uniqid();
+
         if ($create_file) {
-
             $routingTableFile = fopen($routingTableFilename, "w+");
-            if ($empty_file === false) {
 
+            if ($empty_file === false) {
                 fwrite($routingTableFile, "<?php return [
                     'notAllowed' => [
                         'methods' => ['GET'],
@@ -99,9 +99,7 @@ class CoreTest extends TestCase
                         'controller' => 'TestController::baz'
                     ]
                 ] ?>");
-
             }
-
         }
 
         return $routingTableFilename;
@@ -202,8 +200,7 @@ class CoreTest extends TestCase
      */
     public function testCoreRunInto404(Core $core)
     {
-        $core->setRequest(new ServerRequest("GET", "/not-found"));
-        $response = $core->run(true);
+        $response = $core->run(new ServerRequest("GET", "/not-found"), true);
         $this->assertEquals(404, $response->getStatusCode());
     }
 
@@ -214,8 +211,7 @@ class CoreTest extends TestCase
      */
     public function testCoreRunInto405(Core $core)
     {
-        $core->setRequest(new ServerRequest("POST", "/not-allowed"));
-        $response = $core->run(true);
+        $response = $core->run(new ServerRequest("POST", "/not-allowed"), true);
         $this->assertEquals(405, $response->getStatusCode());
         $this->assertEquals("GET", $response->getHeaderLine("Allow"));
     }
@@ -227,9 +223,7 @@ class CoreTest extends TestCase
      */
     public function testCoreWithNoMiddleware(Core $core)
     {
-        $core->setRequest(new ServerRequest("GET", "/valid-controller"));
-        $response = $core->run(true);
-
+        $response = $core->run(new ServerRequest("GET", "/valid-controller"), true);
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertTrue($response->hasHeader("X-Controller-Test"));
     }
@@ -242,8 +236,7 @@ class CoreTest extends TestCase
      */
     public function testCoreWithInvalidControllerClass(Core $core)
     {
-        $core->setRequest(new ServerRequest("GET", "/invalid-controller-class"));
-        $core->run();
+        $core->run(new ServerRequest("GET", "/invalid-controller-class"));
     }
 
     /**
@@ -254,8 +247,7 @@ class CoreTest extends TestCase
      */
     public function testCoreWithInvalidControllerMethod(Core $core)
     {
-        $core->setRequest(new ServerRequest("GET", "/invalid-controller-method"));
-        $core->run();
+        $core->run(new ServerRequest("GET", "/invalid-controller-method"));
     }
 
     /**
@@ -266,8 +258,7 @@ class CoreTest extends TestCase
      */
     public function testCoreWithInvalidControllerDeclaration(Core $core)
     {
-        $core->setRequest(new ServerRequest("GET", "/invalid-controller-declaration"));
-        $core->run();
+        $core->run(new ServerRequest("GET", "/invalid-controller-declaration"));
     }
 
     /**
@@ -281,8 +272,7 @@ class CoreTest extends TestCase
             $this->generateRoutingTableFile()
         );
 
-        $core->setRequest(new ServerRequest("GET", "/valid-controller"));
-        $response = $core->run(true);
+        $response = $core->run(new ServerRequest("GET", "/valid-controller"), true);
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertTrue($response->hasHeader("X-Controller-Test"));
