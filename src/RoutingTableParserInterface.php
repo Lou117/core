@@ -11,8 +11,9 @@ interface RoutingTableParserInterface
 {
     /**
      * Parses given $routing_table, and returns an indexed array of Route instances.
-     * @param mixed $routing_table
+     * @param string $routing_table_path - Path to routing table file. This path has been validated (for existence only)
+     * by Core::loadRoutingTable() method.
      * @return Route[]
      */
-    static public function parse($routing_table): array;
+    public function parse(string $routing_table_path): array;
 }

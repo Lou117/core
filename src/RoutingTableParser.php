@@ -7,32 +7,39 @@
  */
 namespace Lou117\Core;
 
+use \LogicException;
+
 class RoutingTableParser implements RoutingTableParserInterface
 {
     /**
-     * Parses given $routing_table using default behavior of Core framework. Expects an associative array.
-     * @param array $routing_table
-     * @return Route[]
+     * @throws LogicException - If routing table file does not return a PHP array.
      */
-    static public function parse($routing_table): array
+    public function parse(string $routing_table_path): array
     {
         $return = [];
 
+        $routing_table = require($routing_table_path);
+        if (!is_array($routing_table)) {
+            throw new LogicException("Invalid routing table file: must return a PHP array");
+        }
+
         foreach ($routing_table as $endpoint => $routing_table_entry) {
-            $return += self::parseEntry($endpoint, $routing_table_entry, [], []);
+            $return += self::parseEntry($endpoint, $routing_table_entry);
         }
 
         return $return;
     }
 
     /**
-     * @param string $endpoint
-     * @param array $routing_table_entry
-     * @param array $inherited_arguments
-     * @param array $inherited_attributes
+     * Recursively parse given $routing_table_entry, using given $endpoint and overriding given $inherited_arguments and
+     * $inherited_attributes, if any.
+     * @param string $endpoint - Route endpoint.
+     * @param array $routing_table_entry - Routing table entry.
+     * @param array $inherited_arguments (optional, defaults to an empty array) - Arguments inherited from all parent route entries, if any.
+     * @param array $inherited_attributes (optional, defaults to an empty array) - Attributes inherited from all parent route entries, if any.
      * @return Route[]
      */
-    static protected function parseEntry(string $endpoint, array $routing_table_entry, array $inherited_arguments, array $inherited_attributes): array
+    protected function parseEntry(string $endpoint, array $routing_table_entry, array $inherited_arguments = [], array $inherited_attributes = []): array
     {
         $return = [];
 

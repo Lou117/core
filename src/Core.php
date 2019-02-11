@@ -119,6 +119,7 @@ class Core
             "mw-sequence" => [],
             "router" => [
                 "prefix" => "",
+                "parser" => RoutingTableParser::class,
                 "cache" => [
                     "enabled" => true,
                     "path" => "var/cache/fastroute"
@@ -158,20 +159,25 @@ class Core
      * @param string $routing_table_filepath - Path to routing table file.
      * @return Core
      * @throws RoutingTableNotFoundException - If routing table is not found using given path.
-     * @throws InvalidRoutingTableException - If routing table file does not return an array.
      */
     protected function loadRoutingTable(string $routing_table_filepath): Core
     {
-        if (file_exists($routing_table_filepath) === false) {
+        if (!file_exists($routing_table_filepath)) {
             throw new RoutingTableNotFoundException();
         }
 
-        $loadedRoutes = require($routing_table_filepath);
-        if (is_array($loadedRoutes) === false) {
-            throw new InvalidRoutingTableException();
+        $settings = $this->container->get("settings");
+
+        if (!class_exists($settings["router"]["parser"])) {
+            throw new LogicException("Routing table parser class ({$settings["router"]["parser"]}) not found");
         }
 
-        $routes = RoutingTableParser::parse($loadedRoutes);
+        $routingTableParser = new $settings["router"]["parser"]();
+        if (!($routingTableParser instanceof RoutingTableParserInterface)) {
+            throw new LogicException("Routing table parser class must implement RoutingTableParserInterface");
+        }
+
+        $routes = $routingTableParser->parse($routing_table_filepath);
 
         $function = 'FastRoute\simpleDispatcher';
         $params = [];
