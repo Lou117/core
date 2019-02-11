@@ -171,45 +171,7 @@ class Core
             throw new InvalidRoutingTableException();
         }
 
-        $defaultRouteConfig = [
-            "methods" => [],
-            "endpoint" => null,
-            "arguments" => [],
-            "controller" => null
-        ];
-
-        $routes = [];
-        $prefix = $this->container->get("settings")["router"]["prefix"];
-        foreach ($loadedRoutes as $routeName => $routeConfig) {
-            $routeConfig = array_replace_recursive($defaultRouteConfig, $routeConfig);
-
-            if (empty($routeConfig["methods"])) {
-                $this->container->get("core-logger")->warning("Route '{$routeName}' has no method allowed and is ignored");
-                continue;
-            }
-
-            if (is_null($routeConfig["endpoint"]) || trim($routeConfig["endpoint"]) === "") {
-                $this->container->get("core-logger")->warning("Route '{$routeName}' has an empty pattern and is ignored");
-                continue;
-            }
-
-            $route = new Route();
-            $route->name = $routeName;
-            $route->methods = $routeConfig["methods"];
-            $route->endpoint = $prefix.$routeConfig["endpoint"];
-            $route->arguments = $routeConfig["arguments"];
-            $route->controller = $routeConfig["controller"];
-
-            unset(
-                $routeConfig["endpoint"],
-                $routeConfig["methods"],
-                $routeConfig["arguments"],
-                $routeConfig["controller"]
-            );
-
-            $route->attributes = $routeConfig;
-            $routes[$route->name] = $route;
-        }
+        $routes = RoutingTableParser::parse($loadedRoutes);
 
         $function = 'FastRoute\simpleDispatcher';
         $params = [];
@@ -231,8 +193,8 @@ class Core
             /**
              * @var Route $routeObject
              */
-            foreach ($routes as $routeObject) {
-                $r->addRoute($routeObject->methods, $routeObject->endpoint, $routeObject->name);
+            foreach ($routes as $routeIndex => $routeObject) {
+                $r->addRoute($routeObject->methods, $routeObject->endpoint, $routeIndex);
             }
         }, $params));
 
