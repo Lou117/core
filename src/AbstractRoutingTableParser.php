@@ -7,13 +7,29 @@
  */
 namespace Lou117\Core;
 
-interface RoutingTableParserInterface
+use Monolog\Logger;
+
+abstract class AbstractRoutingTableParser
 {
+    /**
+     * @var Logger
+     */
+    protected $coreLogger;
+
+
+    /**
+     * @param Logger $core_logger
+     */
+    public function setLogger(Logger $core_logger)
+    {
+        $this->coreLogger = $core_logger;
+    }
+
     /**
      * Parses given $routing_table, and returns an indexed array of Route instances.
      * @param string $routing_table_path - Path to routing table file. This path has been validated (for existence only)
      * by Core::loadRoutingTable() method.
      * @return Route[]
      */
-    public function parse(string $routing_table_path): array;
+    abstract public function parse(string $routing_table_path): array;
 }

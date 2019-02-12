@@ -9,7 +9,7 @@ namespace Lou117\Core;
 
 use \LogicException;
 
-class RoutingTableParser implements RoutingTableParserInterface
+class RoutingTableParser extends AbstractRoutingTableParser
 {
     /**
      * @throws LogicException - If routing table file does not return a PHP array.
@@ -57,6 +57,17 @@ class RoutingTableParser implements RoutingTableParserInterface
             "arguments" => $inherited_arguments,
             "controller" => null
         ], $routing_table_entry);
+
+        $routing_table_entry["methods"] = array_map(function($method){
+            return strtoupper($method);
+        }, array_filter($routing_table_entry["methods"], function($method){
+            return is_string($method);
+        }));
+
+        if (empty($routing_table_entry["methods"])) {
+            $this->coreLogger->addWarning("Endpoint {$endpoint} has no method allowed, skipped");
+            return [];
+        }
 
         $attributes = array_replace_recursive(
             $inherited_attributes,

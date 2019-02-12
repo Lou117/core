@@ -166,39 +166,70 @@ class Core
 
         $settings = $this->container->get("settings");
 
+        /* Instantiating and running routing table parser */
+
         if (!class_exists($settings["router"]["parser"])) {
             throw new LogicException("Routing table parser class ({$settings["router"]["parser"]}) not found");
         }
 
+        /**
+         * @var AbstractRoutingTableParser $routingTableParser
+         */
         $routingTableParser = new $settings["router"]["parser"]();
-        if (!($routingTableParser instanceof RoutingTableParserInterface)) {
+        if (!($routingTableParser instanceof AbstractRoutingTableParser)) {
             throw new LogicException("Routing table parser class must implement RoutingTableParserInterface");
         }
 
+        $routingTableParser->setLogger($this->container->get("core-logger"));
         $routes = $routingTableParser->parse($routing_table_filepath);
+
+        /* Sanitizing prefix */
+
+        $prefix = trim($settings["router"]["prefix"]);
+        if (substr($prefix, 0, 1) !== "/") {
+            $prefix = "/{$prefix}";
+        }
+
+        if (substr($prefix, -1) === "/") {
+            $prefix = substr($prefix, 0, strlen($prefix) - 1);
+        }
+
+        /* Configuring FastRoute */
 
         $function = 'FastRoute\simpleDispatcher';
         $params = [];
 
         if (
-            (bool) $this->container->get("settings")["router"]["cache"]["enabled"] === true &&
-            is_writable($this->container->get("settings")["router"]["cache"]["path"])
+            (bool) $settings["router"]["cache"]["enabled"] === true &&
+            is_writable($settings["router"]["cache"]["path"])
         ) {
             $function = 'FastRoute\cachedDispatcher';
             $params = [
-                'cacheFile' => $this->container->get("settings")["router"]["cache"]["path"]
+                'cacheFile' => $settings["router"]["cache"]["path"]
             ];
         }
 
+        /* Feeding FastRoute */
+
+        /**
+         * @var Logger $logger
+         */
+        $logger = $this->container->get("core-logger");
         $this->routes = $routes;
 
-        $this->container->set("router", $function(function(FastRoute\RouteCollector $r) use ($routes) {
+        $this->container->set("router", $function(function(FastRoute\RouteCollector $r) use ($routes, $prefix, $logger) {
 
             /**
              * @var Route $routeObject
              */
             foreach ($routes as $routeIndex => $routeObject) {
-                $r->addRoute($routeObject->methods, $routeObject->endpoint, $routeIndex);
+
+                if (!($routeObject instanceof Route)) {
+                    $logger->addWarning("Invalid route (not an instance of Lou117\Core\Route) produced by routing table parser, ignored");
+                    continue;
+                }
+
+                $r->addRoute($routeObject->methods, $prefix.$routeObject->endpoint, $routeIndex);
             }
         }, $params));
 

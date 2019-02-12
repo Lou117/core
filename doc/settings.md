@@ -37,6 +37,8 @@ return [
     "router" => [
         // Prefix for all endpoints declared in routing table (be careful with extra slashes !).
         "prefix" => "",
+        // Define an alternative routing table parser, or use *Core* default one
+        "parser" => "Lou117\Core\RoutingTableParser",
         "cache" => [
             // Whether FastRoute cache (https://github.com/nikic/FastRoute#caching) must be enabled or not.
             "enabled" => true,
@@ -63,6 +65,7 @@ be able to identify your records, you must instantiate a new logger (with a midd
 `AbstractController::__construct()`) and register it in *Core* PSR-11 container.
 - `mw-sequence`: middlewares designated here will be instantiated and run **in given order**. See 
 [*Core* PSR-15 implementation details](psr-15_implementation.md) to know how *Core* implements PSR-15 recommendation.
+- `router.parser`: allows for [using an alternative routing table parser](creating_routing_table_parser.md)
 - `router.cache`: FastRoute caching will be used **only** if `router.cache.enabled` if a true-ish value **and** if 
 `router.cache.path` designates a writable file.
 - `httpNotFoundResponse`: *Core* **ensures** that your custom response will carry a `404` HTTP code.
