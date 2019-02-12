@@ -17,6 +17,7 @@ use Psr\Http\Message\RequestInterface;
 require (__DIR__.'/TestController.php');
 require (__DIR__.'/TestMiddlewareFoo.php');
 require (__DIR__.'/TestMiddlewareBar.php');
+require (__DIR__.'/RoutingTableParserTest.php');
 
 /**
  * PHPUnit test cases for Core and RequestHandler classes.
@@ -60,53 +61,13 @@ class CoreTest extends TestCase
         return $settingsFilename;
     }
 
-    protected function generateRoutingTableFile($create_file = true, $empty_file = false): string
-    {
-        $routingTableFilename = "/tmp/".uniqid();
-
-        if ($create_file) {
-            $routingTableFile = fopen($routingTableFilename, "w+");
-
-            if ($empty_file === false) {
-                fwrite($routingTableFile, "<?php return [
-                    '/not-allowed' => [
-                        'methods' => ['GET'],
-                        'controller' => 'NotReachedController'
-                    ],
-                    '/invalid-controller-declaration' => [
-                        'methods' => ['GET'],
-                        'controller' => 'InvalidControllerfoo'
-                    ],
-                    '/invalid-controller-class' => [
-                        'methods' => ['GET'],
-                        'controller' => 'InvalidController::foo'
-                    ],
-                    '/invalid-controller-method' => [
-                        'methods' => ['GET'],
-                        'controller' => 'TestController::bar'
-                    ],
-                    '/valid-controller' => [
-                        'methods' => ['GET'],
-                        'controller' => 'TestController::foo'
-                    ],
-                    '/invalid-controller-method-return' => [
-                        'methods' => ['GET'],
-                        'controller' => 'TestController::baz'
-                    ]
-                ] ?>");
-            }
-        }
-
-        return $routingTableFilename;
-    }
-
     /**
      * @throws \Lou117\Core\Exception\InvalidSettingsException
      * @return Core
      */
     public function testCoreInstantiation(): Core
     {
-        $core = new Core($this->generateSettingsFile(), $this->generateRoutingTableFile());
+        $core = new Core($this->generateSettingsFile(), RoutingTableParserTest::generateRoutingTableFile());
         $this->assertInstanceOf(Core::class, $core);
 
         return $core;
@@ -120,7 +81,7 @@ class CoreTest extends TestCase
     {
         new Core(
             $this->generateSettingsFile(false),
-            $this->generateRoutingTableFile()
+            RoutingTableParserTest::generateRoutingTableFile()
         );
     }
 
@@ -132,7 +93,7 @@ class CoreTest extends TestCase
     {
         new Core(
             $this->generateSettingsFile(true, true),
-            $this->generateRoutingTableFile()
+            RoutingTableParserTest::generateRoutingTableFile()
         );
     }
 
@@ -144,7 +105,7 @@ class CoreTest extends TestCase
     {
         new Core(
             $this->generateSettingsFile(),
-            $this->generateRoutingTableFile(false)
+            RoutingTableParserTest::generateRoutingTableFile(false)
         );
     }
 
@@ -156,7 +117,7 @@ class CoreTest extends TestCase
     {
         new Core(
             $this->generateSettingsFile(),
-            $this->generateRoutingTableFile(true, true)
+            RoutingTableParserTest::generateRoutingTableFile(true, true)
         );
     }
 
@@ -259,7 +220,7 @@ class CoreTest extends TestCase
     {
         $core = new Core(
             $this->generateSettingsFile(true, false, true),
-            $this->generateRoutingTableFile()
+            RoutingTableParserTest::generateRoutingTableFile()
         );
 
         $response = $core->run(new ServerRequest("GET", "/valid-controller"), true);

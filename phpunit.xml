@@ -5,6 +5,7 @@
             <file>tests/ResponseFactoryTest.php</file>
             <file>tests/CoreTest.php</file>
             <file>tests/ContainerTest.php</file>
+            <file>tests/RoutingTableParserTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>
