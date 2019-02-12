@@ -32,9 +32,4 @@
          * @var string[]
          */
         public $methods;
-
-        /**
-         * @var string
-         */
-        public $name;
     }

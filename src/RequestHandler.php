@@ -72,12 +72,12 @@ class RequestHandler implements RequestHandlerInterface
 
             $controllerData = explode("::", $route->controller);
             if (count($controllerData) !== 2) {
-                throw new RuntimeException("Invalid controller declaration for route {$route->name} (expecting '\\Namespace\\Class::method' format)");
+                throw new RuntimeException("Invalid controller declaration for route {$route->endpoint} (expecting '\\Namespace\\Class::method' format)");
             }
 
             $controllerClass = $controllerData[0];
             if (class_exists($controllerClass) === false) {
-                throw new RuntimeException("Invalid controller declaration for route {$route->name} (unknown class {$controllerClass})");
+                throw new RuntimeException("Invalid controller declaration for route {$route->endpoint} (unknown class {$controllerClass})");
             }
 
             /**

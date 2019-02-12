@@ -12,7 +12,6 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Lou117\Core\Exception\InvalidSettingsException;
 use Lou117\Core\Exception\SettingsNotFoundException;
-use Lou117\Core\Exception\InvalidRoutingTableException;
 use Lou117\Core\Exception\RoutingTableNotFoundException;
 
 /**
@@ -36,7 +35,6 @@ class Core
     /**
      * @param string $settings_filepath - Path to settings file.
      * @param string $routing_table_filepath - Path to routing table file.
-     * @throws InvalidRoutingTableException
      * @throws InvalidSettingsException
      */
     public function __construct(string $settings_filepath, string $routing_table_filepath)

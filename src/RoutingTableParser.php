@@ -24,7 +24,7 @@ class RoutingTableParser implements RoutingTableParserInterface
         }
 
         foreach ($routing_table as $endpoint => $routing_table_entry) {
-            $return += self::parseEntry($endpoint, $routing_table_entry);
+            $return = array_merge($return, self::parseEntry($endpoint, $routing_table_entry));
         }
 
         return $return;
@@ -69,25 +69,23 @@ class RoutingTableParser implements RoutingTableParserInterface
             $return += self::parseEntry($endpoint.$child_endpoint, $child_entry, $routing_table_entry["arguments"], $attributes);
         }
 
+        $route = new Route();
+        $route->endpoint = $endpoint;
+        $route->arguments = $routing_table_entry["arguments"];
+        $route->attributes = $attributes;
+
         if (is_array($routing_table_entry["controller"])) {
             foreach ($routing_table_entry["controller"] as $method => $controller) {
                 if (in_array($method, $routing_table_entry["methods"])) {
-                    $route = new Route();
-                    $route->endpoint = $endpoint;
-                    $route->methods = [$method];
-                    $route->controller = $controller;
-                    $route->arguments = $routing_table_entry["arguments"];
-                    $route->attributes = $attributes;
-                    $return[] = $route;
+                    $clonedRoute = clone $route;
+                    $clonedRoute->methods = [$method];
+                    $clonedRoute->controller = $controller;
+                    $return[] = $clonedRoute;
                 }
             }
         } elseif (trim($routing_table_entry["controller"]) !== "") {
-            $route = new Route();
-            $route->endpoint = $endpoint;
             $route->methods = $routing_table_entry["methods"];
             $route->controller = $routing_table_entry["controller"];
-            $route->arguments = $routing_table_entry["arguments"];
-            $route->attributes = $attributes;
             $return[] = $route;
         }
 

@@ -28,6 +28,5 @@ class RouteTest extends TestCase
         $this->assertObjectHasAttribute("controller", $route);
         $this->assertObjectHasAttribute("endpoint", $route);
         $this->assertObjectHasAttribute("methods", $route);
-        $this->assertObjectHasAttribute("name", $route);
     }
 }

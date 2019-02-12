@@ -69,33 +69,28 @@ class CoreTest extends TestCase
 
             if ($empty_file === false) {
                 fwrite($routingTableFile, "<?php return [
-                    'notAllowed' => [
+                    '/not-allowed' => [
                         'methods' => ['GET'],
-                        'endpoint' => '/not-allowed'
+                        'controller' => 'NotReachedController'
                     ],
-                    'invalidControllerDeclaration' => [
+                    '/invalid-controller-declaration' => [
                         'methods' => ['GET'],
-                        'endpoint' => '/invalid-controller-declaration',
                         'controller' => 'InvalidControllerfoo'
                     ],
-                    'invalidControllerClass' => [
+                    '/invalid-controller-class' => [
                         'methods' => ['GET'],
-                        'endpoint' => '/invalid-controller-class',
                         'controller' => 'InvalidController::foo'
                     ],
-                    'invalidControllerMethod' => [
+                    '/invalid-controller-method' => [
                         'methods' => ['GET'],
-                        'endpoint' => '/invalid-controller-method',
                         'controller' => 'TestController::bar'
                     ],
-                    'validController' => [
+                    '/valid-controller' => [
                         'methods' => ['GET'],
-                        'endpoint' => '/valid-controller',
                         'controller' => 'TestController::foo'
                     ],
-                    'invalidControllerMethodReturn' => [
+                    '/invalid-controller-method-return' => [
                         'methods' => ['GET'],
-                        'endpoint' => '/invalid-controller-method-return',
                         'controller' => 'TestController::baz'
                     ]
                 ] ?>");
@@ -106,7 +101,6 @@ class CoreTest extends TestCase
     }
 
     /**
-     * @throws \Lou117\Core\Exception\InvalidRoutingTableException
      * @throws \Lou117\Core\Exception\InvalidSettingsException
      * @return Core
      */
@@ -120,7 +114,6 @@ class CoreTest extends TestCase
 
     /**
      * @expectedException \Lou117\Core\Exception\SettingsNotFoundException
-     * @throws \Lou117\Core\Exception\InvalidRoutingTableException
      * @throws \Lou117\Core\Exception\InvalidSettingsException
      */
     public function testCoreInstantiationWithSettingsNotFound()
@@ -133,7 +126,6 @@ class CoreTest extends TestCase
 
     /**
      * @expectedException \Lou117\Core\Exception\InvalidSettingsException
-     * @throws \Lou117\Core\Exception\InvalidRoutingTableException
      * @throws \Lou117\Core\Exception\InvalidSettingsException
      */
     public function testCoreInstantiationWithInvalidSettings()
@@ -146,7 +138,6 @@ class CoreTest extends TestCase
 
     /**
      * @expectedException \Lou117\Core\Exception\RoutingTableNotFoundException
-     * @throws \Lou117\Core\Exception\InvalidRoutingTableException
      * @throws \Lou117\Core\Exception\InvalidSettingsException
      */
     public function testCoreInstantiationWithRoutingTableNotFound()
@@ -158,8 +149,7 @@ class CoreTest extends TestCase
     }
 
     /**
-     * @expectedException \Lou117\Core\Exception\InvalidRoutingTableException
-     * @throws \Lou117\Core\Exception\InvalidRoutingTableException
+     * @expectedException \LogicException
      * @throws \Lou117\Core\Exception\InvalidSettingsException
      */
     public function testCoreInstantiationWithInvalidRoutingTable()
