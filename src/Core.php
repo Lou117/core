@@ -112,7 +112,7 @@ class Core
         return array_replace_recursive([
             "logger" => [
                 "channel" => "core",
-                "class" => ["Monolog\Handler\RotatingFileHandler", ["var/log/log", 10]]
+                "class" => ["Monolog\Handler\RotatingFileHandler", ["var".DIRECTORY_SEPARATOR."log".DIRECTORY_SEPARATOR."log", 10]]
             ],
             "mw-sequence" => [],
             "router" => [
@@ -120,7 +120,7 @@ class Core
                 "parser" => RoutingTableParser::class,
                 "cache" => [
                     "enabled" => true,
-                    "path" => "var/cache/fastroute"
+                    "path" => "var".DIRECTORY_SEPARATOR."cache".DIRECTORY_SEPARATOR."fastroute"
                 ]
             ],
             "httpNotFoundResponse" => null,
@@ -183,16 +183,18 @@ class Core
         $routingTableParser->setLogger($this->container->get("core-logger"));
         $routes = $routingTableParser->parse($routing_table_filepath);
 
-        /* Sanitizing prefix */
+        /* Applying prefix */
 
         $prefix = trim($settings["router"]["prefix"]);
-        if (substr($prefix, 0, 1) !== "/") {
-            $prefix = "/{$prefix}";
-        }
+        $routes = array_map(function(Route $route) use ($prefix){
+            $route->endpoint = $prefix.$route->endpoint;
 
-        if (substr($prefix, -1) === "/") {
-            $prefix = substr($prefix, 0, strlen($prefix) - 1);
-        }
+            if (substr($route->endpoint, 0, 1) !== "/") {
+                $route->endpoint = "/{$route->endpoint}";
+            }
+
+            return $route;
+        }, $routes);
 
         /* Configuring FastRoute */
 

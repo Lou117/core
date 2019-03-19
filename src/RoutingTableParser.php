@@ -12,6 +12,7 @@ use \LogicException;
 class RoutingTableParser extends AbstractRoutingTableParser
 {
     /**
+     * @inheritdoc
      * @throws LogicException - If routing table file does not return a PHP array.
      */
     public function parse(string $routing_table_path): array

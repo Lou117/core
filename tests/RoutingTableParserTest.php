@@ -8,7 +8,7 @@
 use Lou117\Core\Route;
 use PHPUnit\Framework\TestCase;
 use Lou117\Core\RoutingTableParser;
-use Lou117\Core\RoutingTableParserInterface;
+use Lou117\Core\AbstractRoutingTableParser;
 
 class RoutingTableParserTest extends TestCase
 {
@@ -133,15 +133,15 @@ class RoutingTableParserTest extends TestCase
         return $this->get($routes, $expected_endpoint, $expected_methods) instanceof Route;
     }
 
-    public function testRoutingParserImplementsRoutingTableParserInterface()
+    public function testRoutingParserExtendsAbstractRoutingTableParser()
     {
         $routingTableParser = new RoutingTableParser();
-        $this->assertInstanceOf(RoutingTableParserInterface::class, $routingTableParser);
+        $this->assertInstanceOf(AbstractRoutingTableParser::class, $routingTableParser);
         return $routingTableParser;
     }
 
     /**
-     * @depends testRoutingParserImplementsRoutingTableParserInterface
+     * @depends testRoutingParserExtendsAbstractRoutingTableParser
      * @param RoutingTableParser $routing_table_parser
      */
     public function testRoutingParser(RoutingTableParser $routing_table_parser)
@@ -183,7 +183,7 @@ class RoutingTableParserTest extends TestCase
     }
 
     /**
-     * @depends testRoutingParserImplementsRoutingTableParserInterface
+     * @depends testRoutingParserExtendsAbstractRoutingTableParser
      * @expectedException LogicException
      * @param RoutingTableParser $routing_table_parser
      */
