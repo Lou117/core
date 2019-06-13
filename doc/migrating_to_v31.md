@@ -21,6 +21,7 @@ your app configuration to default *Core* routing table parser.
 ## *Core* PSR-11 container identifiers changes
 With *Core* v3.1, all identifiers used by *Core* in its internal PSR-11 container are prefixed (or namespaced) with 
 `core.`. Below is a matching table:
+
 |v3.0|v3.1|
 |----|----|
 |settings|core.configuration|
