@@ -80,7 +80,7 @@ class NestedTableParser extends AbstractTableParser
         );
 
         foreach ($routing_table_entry["children"] as $child_endpoint => $child_entry) {
-            $return += self::parseEntry($endpoint.$child_endpoint, $child_entry, $routing_table_entry["arguments"], $attributes);
+            $return = array_merge($return, self::parseEntry($endpoint.$child_endpoint, $child_entry, $routing_table_entry["arguments"], $attributes));
         }
 
         $route = new Route();
