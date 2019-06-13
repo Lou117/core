@@ -1,5 +1,5 @@
 <?php
-    namespace Lou117\Core;
+    namespace Lou117\Core\Routing;
 
     /**
      * Describes a route.
@@ -32,9 +32,4 @@
          * @var string[]
          */
         public $methods;
-
-        /**
-         * @var string
-         */
-        public $name;
     }

@@ -21,7 +21,8 @@ Download *Core* skeleton application using [Composer](https://getcomposer.org/)
 (`composer create-project lou117/core-skeleton`): a tutorial will help you through your journey, if you need it !
 # *Core* documentation
 - [Request lifecycle in *Core*](doc/request_lifecycle.md)
-- [Settings syntax and usage](doc/settings.md)
+- [Configuration syntax and usage](doc/configuration.md)
 - [Routing table syntax and usage](doc/routing.md)
 - [Understanding PSR-15 implementation](doc/psr-15_implementation.md)
 - [Adding controllers](doc/controllers.md)
+- [Migrating from v3.0 to v3.1](doc/migrating_to_v31.md)

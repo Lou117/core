@@ -33,24 +33,12 @@ class ContainerTest extends TestCase
     }
 
     /**
+     * @param Container $container
      * @depends testContainerSet
      */
     public function testContainerGet(Container $container)
     {
         $this->assertEquals("test", $container->get("test"));
-    }
-
-    /**
-     * @depends testContainerInstantiation
-     * @expectedException InvalidArgumentException
-     * @expectedExceptionMessage reserved
-     */
-    public function testContainerProtection(Container $container)
-    {
-        $container->protect();
-        $this->assertTrue($container->isProtected());
-
-        $container->set("request", "test");
     }
 
     /**

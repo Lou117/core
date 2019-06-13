@@ -23,21 +23,21 @@ This is how *middlewares* works, and how *Core* works.
 
 ## The role of *Core* `RequestHandler`
 *Core* `RequestHandler` class, implementing PSR-15 `RequestHandlerInterface`, is responsible for :
-- managing middleware stack (declared in [settings](settings.md)) ;
+- managing middleware stack (declared in [configuration](configuration.md)) ;
 - instantiating controller ;
 - calling appropriate controller method (defined in [routing table](routing.md)).
 
 Internally, what *Core* `RequestHandler` does is passing itself as second parameter to `MiddlewareInterface::process()` 
 method until middleware stack is exhausted ; **then** it instantiates your controller and calls the method you define.
 
-*Middlewares* are called in the order you declared them in [settings](settings.md) (the first *middleware* declared will 
-be the first to receive `ServerRequestInterface` instance), so they receive any `ResponseInterface` **in reverse order** 
-(the first *middleware* declared will be the last to receive `ResponseInterface` instance).
+*Middlewares* are called in the order you declared them in [configuration](configuration.md) (the first *middleware* 
+declared will be the first to receive `ServerRequestInterface` instance), so they receive any `ResponseInterface` **in 
+reverse order** (the first *middleware* declared will be the last to receive `ResponseInterface` instance).
 
 ## Am I required to have *middlewares* in my application?
-Absolutely not. You can omit all the *middleware*-specific part of *Core* [settings](settings.md) and everything will be 
-fine. But *middlewares* are *a way to move common request and response processing away from the application layer* 
-(citing PSR recommendation here), and thus very useful.
+Absolutely not. You can omit all the *middleware*-specific part of *Core* [configuration](configuration.md) and 
+everything will be fine. But *middlewares* are *a way to move common request and response processing away from the 
+application layer* (quoting PSR recommendation here), and thus very useful.
 
 Without *middlewares*, your controllers are required to implement some `beforeFilter` and/or `afterFilter` methods 
 (looking at you, [CakePHP](https://api.cakephp.org/3.6/class-Cake.Controller.Controller.html)) to house all of the 
@@ -45,4 +45,4 @@ Without *middlewares*, your controllers are required to implement some `beforeFi
 specific controller method being called.
 
 Using *PSR-15* middlewares also allows you to require whatever PSR-15 compliant middleware-providing package(s) you want 
-through [Composer](https://get-composer.org/), and not worry about interoperability. Sounds great huh ?
+through [Composer](https://get-composer.org/), and not worry about interoperability. Sounds great huh?

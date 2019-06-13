@@ -5,7 +5,7 @@
  * Date: 08/07/2018
  * Time: 19:52
  */
-use Lou117\Core\Route;
+use Lou117\Core\Routing\Route;
 use PHPUnit\Framework\TestCase;
 
 class RouteTest extends TestCase
@@ -28,6 +28,5 @@ class RouteTest extends TestCase
         $this->assertObjectHasAttribute("controller", $route);
         $this->assertObjectHasAttribute("endpoint", $route);
         $this->assertObjectHasAttribute("methods", $route);
-        $this->assertObjectHasAttribute("name", $route);
     }
 }

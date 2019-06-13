@@ -20,7 +20,7 @@ class ResponseFactoryTest extends TestCase
         $response = ResponseFactory::createHtmlResponse($body, $code);
         $this->assertInstanceOf(ResponseInterface::class, $response);
 
-        $this->assertEquals("text/html", $response->getHeaderLine("Content-Type"));
+        $this->assertEquals("text/html", $response->getHeaderLine(ResponseFactory::HTTP_HEADER_CONTENT_TYPE));
         $this->assertEquals($body, $response->getBody()->read($response->getBody()->getSize()));
         $this->assertEquals($code, $response->getStatusCode());
     }
@@ -30,7 +30,7 @@ class ResponseFactoryTest extends TestCase
         $response = ResponseFactory::createTextResponse("\n\t  ");
         $this->assertInstanceOf(ResponseInterface::class, $response);
 
-        $this->assertFalse($response->hasHeader("Content-Type"));
+        $this->assertFalse($response->hasHeader(ResponseFactory::HTTP_HEADER_CONTENT_TYPE));
         $this->assertEmpty($response->getBody()->read($response->getBody()->getSize()));
     }
 
@@ -42,7 +42,7 @@ class ResponseFactoryTest extends TestCase
         $response = ResponseFactory::createJsonResponse($json, $code);
         $this->assertInstanceOf(ResponseInterface::class, $response);
 
-        $this->assertEquals("application/json", $response->getHeaderLine("Content-Type"));
+        $this->assertEquals("application/json; charset=utf-8", $response->getHeaderLine(ResponseFactory::HTTP_HEADER_CONTENT_TYPE));
         $this->assertEquals($json, json_decode($response->getBody()->read($response->getBody()->getSize()), true));
         $this->assertEquals($code, $response->getStatusCode());
     }
@@ -65,7 +65,7 @@ class ResponseFactoryTest extends TestCase
         $response = ResponseFactory::createTextResponse($body, $code);
         $this->assertInstanceOf(ResponseInterface::class, $response);
 
-        $this->assertEquals("text/plain", $response->getHeaderLine("Content-Type"));
+        $this->assertEquals("text/plain", $response->getHeaderLine(ResponseFactory::HTTP_HEADER_CONTENT_TYPE));
         $this->assertEquals($body, $response->getBody()->read($response->getBody()->getSize()));
         $this->assertEquals($code, $response->getStatusCode());
     }
@@ -75,7 +75,7 @@ class ResponseFactoryTest extends TestCase
         $response = ResponseFactory::createTextResponse("\n\t  ");
         $this->assertInstanceOf(ResponseInterface::class, $response);
 
-        $this->assertFalse($response->hasHeader("Content-Type"));
+        $this->assertFalse($response->hasHeader(ResponseFactory::HTTP_HEADER_CONTENT_TYPE));
         $this->assertEmpty($response->getBody()->read($response->getBody()->getSize()));
     }
 
