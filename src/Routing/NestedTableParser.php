@@ -72,11 +72,6 @@ class NestedTableParser extends AbstractTableParser
             return is_string($method);
         }));
 
-        if (empty($routing_table_entry["methods"])) {
-            $this->logger->warning("Endpoint {$endpoint} has no method allowed, skipped");
-            return [];
-        }
-
         $attributes = array_replace_recursive(
             $inherited_attributes,
             array_filter($routing_table_entry, function($key){
