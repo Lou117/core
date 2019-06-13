@@ -1,11 +1,12 @@
 <phpunit bootstrap="vendor/autoload.php">
     <testsuites>
         <testsuite name="Core">
-            <file>tests/RouteTest.php</file>
-            <file>tests/ResponseFactoryTest.php</file>
-            <file>tests/CoreTest.php</file>
+            <file>tests/Routing/LegacyTableParserTest.php</file>
+            <file>tests/Routing/NestedTableParserTest.php</file>
+            <file>tests/Routing/RouteTest.php</file>
             <file>tests/ContainerTest.php</file>
-            <file>tests/RoutingTableParserTest.php</file>
+            <file>tests/CoreTest.php</file>
+            <file>tests/ResponseFactoryTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

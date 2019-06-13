@@ -10,6 +10,7 @@ namespace Lou117\Core;
 use \LogicException;
 use \RuntimeException;
 use \BadMethodCallException;
+use Lou117\Core\Routing\Route;
 use Lou117\Core\Container\Container;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -37,7 +38,7 @@ class RequestHandler implements RequestHandlerInterface
     public function __construct(Container $core_container)
     {
         $this->container = $core_container;
-        $this->middlewareSequence = $this->container->get("settings")["mw-sequence"];
+        $this->middlewareSequence = $this->container->get("core.configuration")["mw-sequence"];
         reset($this->middlewareSequence);
     }
 
@@ -57,7 +58,7 @@ class RequestHandler implements RequestHandlerInterface
          * If request is modified by a middleware, and as ServerRequestInterface is immutable, given $request must
          * replace current ServerRequestInterface in RequestHandler PSR-11 container.
          */
-        $this->container->set("request", $request);
+        $this->container->set("core.request", $request);
 
         $middlewareEntry = current($this->middlewareSequence);
         next($this->middlewareSequence);
@@ -68,7 +69,7 @@ class RequestHandler implements RequestHandlerInterface
             /**
              * @var Route $route
              */
-            $route = $this->container->get("route");
+            $route = $this->container->get("core.route");
 
             $controllerData = explode("::", $route->controller);
             if (count($controllerData) !== 2) {

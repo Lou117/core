@@ -1,5 +1,5 @@
 <?php
-    namespace Lou117\Core;
+    namespace Lou117\Core\Routing;
 
     /**
      * Describes a route.

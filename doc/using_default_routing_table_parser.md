@@ -1,6 +1,6 @@
-# Using *Core* `RoutingTableParser`
+# Using *Core* default routing table parser (`NestedTableParser`)
 ## File format
-*Core* default `RoutingTableParser` expects routing table file to be a PHP script returning an array, that can be empty:
+*Core* default `NestedTableParser` expects routing table file to be a PHP script returning an array, that can be empty:
 ```php
 <?php
 /* MyApplication routing table */
@@ -58,11 +58,12 @@ return [
 ];
 ```
 In this example, a request to `GET /users` will trigger `MyApplication\UserController::all` method, although a request 
-to `POST /users` will trigger `MyApplication::UserController::create` method. Have you notice we added a third method 
-with a corresponding controller FQSEN ? **This declaration will be ignored**, because `PUT` is not one of the allowed 
+to `POST /users` will trigger `MyApplication\UserController::create` method. Have you notice we added a third method 
+with a corresponding controller FQSEN? **This declaration will be ignored**, because `PUT` is not one of the allowed 
 methods in `methods`.
-### Defining default values for endpoint actionable data (a.k.a "arguments")
-For optional URI "arguments" (enclosed in `[]` in patterns), you can define default values within your route declaration:
+### Defining default values for endpoint actionable data (a.k.a. "arguments")
+For optional URI "arguments" (enclosed in `[]` in patterns), you can define default values within your route 
+declaration:
 ```php
 <?php
 /* MyApplication routing table */
@@ -112,7 +113,7 @@ return [
 All data in routing table declaration that is not used by FastRoute nor *Core* is kept in `Route::$attributes` property 
 to be at your disposal anywhere in your application.
 ## Nested routes
-As of *Core* v3.1, default `RoutingTableParser` handles nested routes:
+As of *Core* v3.1, default `NestedTableParser` handles nested routes:
 ```php
 <?php
 /* MyApplication routing table */

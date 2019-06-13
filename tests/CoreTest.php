@@ -8,7 +8,6 @@
 
 use Monolog\Logger;
 use Lou117\Core\Core;
-use FastRoute\Dispatcher;
 use PHPUnit\Framework\TestCase;
 use GuzzleHttp\Psr7\ServerRequest;
 use Lou117\Core\Container\Container;
@@ -17,112 +16,101 @@ use Psr\Http\Message\RequestInterface;
 require (__DIR__.'/TestController.php');
 require (__DIR__.'/TestMiddlewareFoo.php');
 require (__DIR__.'/TestMiddlewareBar.php');
-require (__DIR__.'/RoutingTableParserTest.php');
+require_once (__DIR__.'/Routing/NestedTableParserTest.php');
 
 /**
  * PHPUnit test cases for Core and RequestHandler classes.
  */
 class CoreTest extends TestCase
 {
-    protected function generateSettingsFile(bool $create_file = true, bool $empty_file = false, bool $with_mw_sequence = false): string
+    /**
+     * Generates a temporary file to be used as configuration, and returns generated file path.
+     *
+     * @param bool $create_file - must file be created? (allows for testing with non-existent configuration file,
+     * defaults to TRUE)
+     * @param bool $empty_file - must file be empty? (allows for testing with invalid configuration file, defaults to
+     * FALSE)
+     * @param bool $with_mw_sequence - must configuration be containing middleware sequence? (allows for testing with or
+     * without middleware sequence, defaults to FALSE)
+     * @return string
+     */
+    protected function generateConfigurationFile(bool $create_file = true, bool $empty_file = false, bool $with_mw_sequence = false): string
     {
-        $settingsFilename = "/tmp/".uniqid();
-        if ($create_file) {
+        $configurationFilename = "/tmp/".uniqid();
 
-            $settingsFile = fopen($settingsFilename, "w+");
+        if ($create_file) {
+            $configurationFile = fopen($configurationFilename, "w+");
+
             if ($empty_file === false) {
 
                 if ($with_mw_sequence) {
-
-                    fwrite($settingsFile, "<?php return [
+                    fwrite($configurationFile, "<?php return [
+                        'logger' => [
+                            'class' => ['Monolog\Handler\RotatingFileHandler', ['/tmp/log', 1]]
+                        ],
                         'mw-sequence' => [
                             TestMiddlewareFoo::class,
                             TestMiddlewareBar::class
-                        ],
-                        'logger' => [
-                            'class' => ['Monolog\Handler\RotatingFileHandler', ['/tmp/log', 1]]
                         ]
-                    ] ?>");
-
+                    ];");
                 } else {
-
-                    fwrite($settingsFile, "<?php return [
+                    fwrite($configurationFile, "<?php return [
                         'logger' => [
                             'class' => ['Monolog\Handler\RotatingFileHandler', ['/tmp/log', 1]]
                         ]
-                    ] ?>");
-
+                    ];");
                 }
 
             }
-
         }
 
-        return $settingsFilename;
+        return $configurationFilename;
     }
 
     /**
-     * @throws \Lou117\Core\Exception\InvalidSettingsException
      * @return Core
      */
-    public function testCoreInstantiation(): Core
+    public function testCoreInstantiationWithoutParameters(): Core
     {
-        $core = new Core($this->generateSettingsFile(), RoutingTableParserTest::generateRoutingTableFile());
+        $core = new Core();
         $this->assertInstanceOf(Core::class, $core);
 
         return $core;
     }
 
     /**
-     * @expectedException \Lou117\Core\Exception\SettingsNotFoundException
-     * @throws \Lou117\Core\Exception\InvalidSettingsException
+     * @depends testCoreInstantiationWithoutParameters
+     * @param Core $core
+     * @expectedException InvalidArgumentException
      */
-    public function testCoreInstantiationWithSettingsNotFound()
+    public function testConfigurationLoadingWithNonExistentFile(Core $core)
     {
-        new Core(
-            $this->generateSettingsFile(false),
-            RoutingTableParserTest::generateRoutingTableFile()
-        );
+        $core->loadConfigurationFile($this->generateConfigurationFile(false));
     }
 
     /**
-     * @expectedException \Lou117\Core\Exception\InvalidSettingsException
-     * @throws \Lou117\Core\Exception\InvalidSettingsException
+     * @depends testCoreInstantiationWithoutParameters
+     * @param Core $core
+     * @expectedException InvalidArgumentException
      */
-    public function testCoreInstantiationWithInvalidSettings()
+    public function testRoutingTableLoadingWithNonExistentFile(Core $core)
     {
-        new Core(
-            $this->generateSettingsFile(true, true),
-            RoutingTableParserTest::generateRoutingTableFile()
-        );
+        $core->loadRoutingTableFile(NestedTableParserTest::generateRoutingTableFile(false));
     }
 
     /**
-     * @expectedException \Lou117\Core\Exception\RoutingTableNotFoundException
-     * @throws \Lou117\Core\Exception\InvalidSettingsException
+     * @return Core
      */
-    public function testCoreInstantiationWithRoutingTableNotFound()
+    public function testCoreInstantiationWithParameters(): Core
     {
-        new Core(
-            $this->generateSettingsFile(),
-            RoutingTableParserTest::generateRoutingTableFile(false)
-        );
+        $core = new Core($this->generateConfigurationFile(), NestedTableParserTest::generateRoutingTableFile());
+        $this->assertInstanceOf(Core::class, $core);
+
+        return $core;
     }
 
     /**
-     * @expectedException \LogicException
-     * @throws \Lou117\Core\Exception\InvalidSettingsException
-     */
-    public function testCoreInstantiationWithInvalidRoutingTable()
-    {
-        new Core(
-            $this->generateSettingsFile(),
-            RoutingTableParserTest::generateRoutingTableFile(true, true)
-        );
-    }
-
-    /**
-     * @depends testCoreInstantiation
+     * @depends testCoreInstantiationWithParameters
      * @param Core $core
      * @return Core
      */
@@ -131,21 +119,19 @@ class CoreTest extends TestCase
         $container = $core->getContainer();
         $this->assertInstanceOf(Container::class, $container);
 
-        $this->assertTrue(is_array($container->get("settings")));
-        $this->assertNotEmpty($container->get("settings"));
+        $this->assertTrue(is_array($container->get("core.configuration")));
+        $this->assertNotEmpty($container->get("core.configuration"));
 
-        $this->assertInstanceOf(Logger::class, $container->get("core-logger"));
-        $this->assertTrue(count($container->get("core-logger")->getHandlers()) > 0);
+        $this->assertInstanceOf(Logger::class, $container->get("core.logger"));
+        $this->assertTrue(count($container->get("core.logger")->getHandlers()) > 0);
 
-        $this->assertInstanceOf(Dispatcher::class, $container->get("router"));
-
-        $this->assertInstanceOf(RequestInterface::class, $container->get("request"));
+        $this->assertInstanceOf(RequestInterface::class, $container->get("core.request"));
 
         return $core;
     }
 
     /**
-     * @depends testCoreContainerAfterInstantiation
+     * @depends testCoreInstantiationWithParameters
      * @param Core $core
      * @throws Exception
      */
@@ -156,7 +142,7 @@ class CoreTest extends TestCase
     }
 
     /**
-     * @depends testCoreContainerAfterInstantiation
+     * @depends testCoreInstantiationWithParameters
      * @param Core $core
      * @throws Exception
      */
@@ -168,7 +154,7 @@ class CoreTest extends TestCase
     }
 
     /**
-     * @depends testCoreContainerAfterInstantiation
+     * @depends testCoreInstantiationWithParameters
      * @param Core $core
      * @throws Exception
      */
@@ -213,15 +199,13 @@ class CoreTest extends TestCase
     }
 
     /**
-     * @depends testCoreWithNoMiddleware
+     * @depends testCoreInstantiationWithParameters
+     * @param Core $core
      * @throws Exception
      */
-    public function testCoreWithMiddlewareSequence()
+    public function testCoreWithMiddlewareSequence(Core $core)
     {
-        $core = new Core(
-            $this->generateSettingsFile(true, false, true),
-            RoutingTableParserTest::generateRoutingTableFile()
-        );
+        $core->loadConfigurationFile($this->generateConfigurationFile(true, false, true));
 
         $response = $core->run(new ServerRequest("GET", "/valid-controller"), true);
 

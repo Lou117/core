@@ -5,7 +5,7 @@
  * Date: 08/07/2018
  * Time: 19:52
  */
-use Lou117\Core\Route;
+use Lou117\Core\Routing\Route;
 use PHPUnit\Framework\TestCase;
 
 class RouteTest extends TestCase

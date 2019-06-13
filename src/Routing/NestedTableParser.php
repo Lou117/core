@@ -5,27 +5,33 @@
  * Date: 2019-02-08
  * Time: 17:47
  */
-namespace Lou117\Core;
+namespace Lou117\Core\Routing;
 
 use \LogicException;
 
-class RoutingTableParser extends AbstractRoutingTableParser
+class NestedTableParser extends AbstractTableParser
 {
     /**
-     * @inheritdoc
-     * @throws LogicException - If routing table file does not return a PHP array.
+     * Includes PHP file located at given $routing_table_file_path, parses it as a Core v3.1+ nested routing table, and
+     * returns an array of Route instances.
+     *
+     * File existence is checked by Core::loadRoutingTableFile() method.
+     *
+     * @param string $routing_table_file_path - routing table file path.
+     * @return Route[]
      */
-    public function parse(string $routing_table_path): array
+    public function parse(string $routing_table_file_path): array
     {
-        $return = [];
+        $fileRoutes = require($routing_table_file_path);
 
-        $routing_table = require($routing_table_path);
-        if (!is_array($routing_table)) {
-            throw new LogicException("Invalid routing table file: must return a PHP array");
+        if (is_array($fileRoutes) === false) {
+            throw new LogicException("Legacy routing table file must be a PHP script returning an array");
         }
 
-        foreach ($routing_table as $endpoint => $routing_table_entry) {
-            $return = array_merge($return, self::parseEntry($endpoint, $routing_table_entry));
+        $return = [];
+
+        foreach ($fileRoutes as $endpoint => $routing_table_entry) {
+            $return = array_merge($return, $this->parseEntry($endpoint, $routing_table_entry));
         }
 
         return $return;
@@ -34,6 +40,7 @@ class RoutingTableParser extends AbstractRoutingTableParser
     /**
      * Recursively parse given $routing_table_entry, using given $endpoint and overriding given $inherited_arguments and
      * $inherited_attributes, if any.
+     *
      * @param string $endpoint - Route endpoint.
      * @param array $routing_table_entry - Routing table entry.
      * @param array $inherited_arguments (optional, defaults to an empty array) - Arguments inherited from all parent route entries, if any.
@@ -66,7 +73,7 @@ class RoutingTableParser extends AbstractRoutingTableParser
         }));
 
         if (empty($routing_table_entry["methods"])) {
-            $this->coreLogger->addWarning("Endpoint {$endpoint} has no method allowed, skipped");
+            $this->logger->warning("Endpoint {$endpoint} has no method allowed, skipped");
             return [];
         }
 
@@ -87,7 +94,9 @@ class RoutingTableParser extends AbstractRoutingTableParser
         $route->attributes = $attributes;
 
         if (is_array($routing_table_entry["controller"])) {
+
             foreach ($routing_table_entry["controller"] as $method => $controller) {
+
                 if (in_array($method, $routing_table_entry["methods"])) {
                     $clonedRoute = clone $route;
                     $clonedRoute->methods = [$method];
