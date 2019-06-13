@@ -120,17 +120,17 @@ class ResponseFactory
      */
     public static function sendToClient(ResponseInterface $response)
     {
-        if (!headers_sent()) {
+        if (headers_sent() === false) {
 
             foreach ($response->getHeaders() as $name => $values) {
                 $replace = false;
 
                 // Skip Content-Length header, to ensure it is sent with correct body length, if any.
-                if (strcasecmp($name, self::HTTP_HEADER_CONTENT_LENGTH)) {
+                if (strcasecmp($name, self::HTTP_HEADER_CONTENT_LENGTH) === 0) {
                     continue;
                 }
 
-                if (strcasecmp($name, self::HTTP_HEADER_CONTENT_TYPE)) {
+                if (strcasecmp($name, self::HTTP_HEADER_CONTENT_TYPE) === 0) {
                     // A response can only have one Content-Type header
                     $replace = true;
 
@@ -151,7 +151,7 @@ class ResponseFactory
                 $response->getBody()->getSize() > 0
                 && !self::isEmptyResponse($response)
             ) {
-                header(sprintf(self::HTTP_HEADER_CONTENT_LENGTH.': '.$response->getBody()->getSize(), true, $response->getStatusCode()));
+                header(self::HTTP_HEADER_CONTENT_LENGTH.': '.$response->getBody()->getSize(), true, $response->getStatusCode());
             }
         }
 
