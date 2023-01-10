@@ -11,7 +11,7 @@ class Container implements ContainerInterface
 
     public function get(string|int $id): mixed
     {
-        if ($this->has($id) === false) {
+        if (!$this->has($id)) {
             throw new NotFoundException();
         }
 

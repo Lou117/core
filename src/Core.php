@@ -36,14 +36,14 @@ class Core
         $this->container->set("core.request", ServerRequest::fromGlobals());
 
         if (
-            is_null($configuration_file_path) === false
+            is_string($configuration_file_path)
             && trim($configuration_file_path) !== ""
         ) {
             $this->loadConfigurationFile($configuration_file_path);
         }
 
         if (
-            is_null($routing_table_file_path) === false
+            is_string($routing_table_file_path)
             && trim($routing_table_file_path) !== ""
         ) {
             $this->loadRoutingTableFile($routing_table_file_path);
@@ -143,7 +143,7 @@ class Core
                 && class_exists($settings["httpNotFoundResponse"])
             ) ? new $settings["httpNotFoundResponse"]() : new Response();
 
-            if (($response instanceof ResponseInterface) === false) {
+            if (!($response instanceof ResponseInterface)) {
                 throw new LogicException("{$settings["httpNotFoundResponse"]} class must be implementing ResponseInterface");
             }
 

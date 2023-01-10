@@ -18,7 +18,7 @@ class LegacyTableParser extends AbstractTableParser
     {
         $fileRoutes = require($routing_table_file_path);
 
-        if (is_array($fileRoutes) === false) {
+        if (!is_array($fileRoutes)) {
             throw new LogicException("Legacy routing table file must be a PHP script returning an array");
         }
 
