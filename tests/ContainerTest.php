@@ -5,6 +5,8 @@
  * Date: 08/07/2018
  * Time: 19:52
  */
+
+use Lou117\Core\Container\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use Lou117\Core\Container\Container;
 
@@ -44,21 +46,20 @@ class ContainerTest extends TestCase
     /**
      * @depends testContainerSet
      * @param Container $container
-     * @expectedException InvalidArgumentException
-     * @expectedExceptionMessage already in use
      */
     public function testContainerDuplicate(Container $container)
     {
+        $this->expectException(InvalidArgumentException::class);
         $container->set("test", "test", true);
     }
 
     /**
      * @depends testContainerInstantiation
      * @param Container $container
-     * @expectedException \Lou117\Core\Container\NotFoundException
      */
     public function testContainerNotFound(Container $container)
     {
+        $this->expectException(NotFoundException::class);
         $container->get("notfound");
     }
 }

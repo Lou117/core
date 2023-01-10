@@ -81,20 +81,20 @@ class CoreTest extends TestCase
     /**
      * @depends testCoreInstantiationWithoutParameters
      * @param Core $core
-     * @expectedException InvalidArgumentException
      */
     public function testConfigurationLoadingWithNonExistentFile(Core $core)
     {
+        $this->expectException(InvalidArgumentException::class);
         $core->loadConfigurationFile($this->generateConfigurationFile(false));
     }
 
     /**
      * @depends testCoreInstantiationWithoutParameters
      * @param Core $core
-     * @expectedException InvalidArgumentException
      */
     public function testRoutingTableLoadingWithNonExistentFile(Core $core)
     {
+        $this->expectException(InvalidArgumentException::class);
         $core->loadRoutingTableFile(NestedTableParserTest::generateRoutingTableFile(false));
     }
 
@@ -116,7 +116,7 @@ class CoreTest extends TestCase
      */
     public function testCoreContainerAfterInstantiation(Core $core): Core
     {
-        $container = $core->getContainer();
+        $container = $core->container;
         $this->assertInstanceOf(Container::class, $container);
 
         $this->assertTrue(is_array($container->get("core.configuration")));
@@ -167,34 +167,34 @@ class CoreTest extends TestCase
 
     /**
      * @depends testCoreContainerAfterInstantiation
-     * @expectedException RuntimeException
      * @param Core $core
      * @throws Exception
      */
     public function testCoreWithInvalidControllerClass(Core $core)
     {
+        $this->expectException(RuntimeException::class);
         $core->run(new ServerRequest("GET", "/invalid-controller-class"));
     }
 
     /**
      * @depends testCoreContainerAfterInstantiation
-     * @expectedException BadMethodCallException
      * @param Core $core
      * @throws Exception
      */
     public function testCoreWithInvalidControllerMethod(Core $core)
     {
+        $this->expectException(BadMethodCallException::class);
         $core->run(new ServerRequest("GET", "/invalid-controller-method"));
     }
 
     /**
      * @depends testCoreContainerAfterInstantiation
-     * @expectedException RuntimeException
      * @param Core $core
      * @throws Exception
      */
     public function testCoreWithInvalidControllerDeclaration(Core $core)
     {
+        $this->expectException(RuntimeException::class);
         $core->run(new ServerRequest("GET", "/invalid-controller-declaration"));
     }
 

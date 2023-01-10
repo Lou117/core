@@ -1,35 +1,17 @@
-<?php
-    namespace Lou117\Core\Routing;
+<?php declare(strict_types=1);
+namespace Lou117\Core\Routing;
 
-    /**
-     * Describes a route.
-     *
-     * @package Lou117\Core
-     */
-    class Route
-    {
-        /**
-         * @var mixed[]
-         */
-        public $arguments;
+class Route
+{
+    public ?array $arguments = null;
 
-        /**
-         * @var mixed[]
-         */
-        public $attributes;
+    public ?array $attributes = null;
 
-        /**
-         * @var string
-         */
-        public $controller;
+    public ?string $controller = null;
 
-        /**
-         * @var string
-         */
-        public $endpoint;
+    public ?string $endpoint = null;
 
-        /**
-         * @var string[]
-         */
-        public $methods;
-    }
+    public ?array $methods = null;
+
+    public ?string $name = null;
+}

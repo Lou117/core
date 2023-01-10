@@ -1,15 +1,9 @@
-<?php
-/**
- * Created by PhpStorm.
- * User: sylvain
- * Date: 08/07/2018
- * Time: 16:38
- */
+<?php declare(strict_types=1);
 namespace Lou117\Core;
 
-use \LogicException;
-use \RuntimeException;
-use \BadMethodCallException;
+use LogicException;
+use RuntimeException;
+use BadMethodCallException;
 use Lou117\Core\Routing\Route;
 use Lou117\Core\Container\Container;
 use Psr\Http\Message\ResponseInterface;
@@ -20,16 +14,15 @@ use Psr\Http\Server\RequestHandlerInterface;
 class RequestHandler implements RequestHandlerInterface
 {
     /**
-     * Reference to Core container.
-     * @var Container
+     * Reference to Core container
      */
-    public $container;
+    public readonly Container $container;
 
     /**
      * Middleware sequence from first layer to last layer.
      * @var MiddlewareInterface[]
      */
-    protected $middlewareSequence = [];
+    protected array $middlewareSequence = [];
 
 
     /**
@@ -50,13 +43,13 @@ class RequestHandler implements RequestHandlerInterface
      * @throws BadMethodCallException - If controller declaration FQCN in routing table references a method that does
      * not exists in controller class.
      * @throws LogicException - If controller method referenced in routing table does not return an instance of
-     * ResponseInterface, or if any middleware declared in settings does not implements MiddlewareInterface.
+     * `ResponseInterface`, or if any middleware declared in settings does not implement `MiddlewareInterface`.
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         /**
-         * If request is modified by a middleware, and as ServerRequestInterface is immutable, given $request must
-         * replace current ServerRequestInterface in RequestHandler PSR-11 container.
+         * If request is modified by a middleware, and as `ServerRequestInterface` is immutable, given `$request` must
+         * replace current `ServerRequestInterface` in `RequestHandler` PSR-11 container.
          */
         $this->container->set("core.request", $request);
 
@@ -72,12 +65,14 @@ class RequestHandler implements RequestHandlerInterface
             $route = $this->container->get("core.route");
 
             $controllerData = explode("::", $route->controller);
+
             if (count($controllerData) !== 2) {
                 throw new RuntimeException("Invalid controller declaration for route {$route->endpoint} (expecting '\\Namespace\\Class::method' format)");
             }
 
             $controllerClass = $controllerData[0];
-            if (class_exists($controllerClass) === false) {
+
+            if (!class_exists($controllerClass)) {
                 throw new RuntimeException("Invalid controller declaration for route {$route->endpoint} (unknown class {$controllerClass})");
             }
 
@@ -87,7 +82,8 @@ class RequestHandler implements RequestHandlerInterface
             $controller = new $controllerClass($this->container);
 
             $controllerMethod = $controllerData[1];
-            if (method_exists($controller, $controllerMethod) === false) {
+
+            if (!method_exists($controller, $controllerMethod)) {
                 throw new BadMethodCallException("{$controllerClass}::{$controllerMethod} declared in routes doesn't exists in {$controllerClass}");
             }
 
@@ -95,7 +91,8 @@ class RequestHandler implements RequestHandlerInterface
              * @var $response ResponseInterface
              */
             $response = $controller->{$controllerMethod}();
-            if (($response instanceof ResponseInterface) === false) {
+
+            if (!($response instanceof ResponseInterface)) {
                 throw new LogicException("Method {$controllerMethod} must return an instance of PSR-7 ResponseInterface");
             }
 
@@ -108,7 +105,8 @@ class RequestHandler implements RequestHandlerInterface
              * @var $middleware MiddlewareInterface
              */
             $middleware = new $middlewareFQCN($middlewareParams);
-            if (($middleware instanceof MiddlewareInterface) === false) {
+
+            if (!($middleware instanceof MiddlewareInterface)) {
                 throw new LogicException("Middleware {$middlewareFQCN} must implements PSR-11 MiddlewareInterface");
             }
 

@@ -157,10 +157,10 @@ class NestedTableParserTest extends TestCase
     /**
      * @depends testParserInstantiation
      * @param NestedTableParser $parser
-     * @expectedException LogicException
      */
     public function testParserThrowsExceptionOnInvalidRoutingTable(NestedTableParser $parser)
     {
+        $this->expectException(LogicException::class);
         $parser->parse(self::generateRoutingTableFile(true, true));
     }
 
