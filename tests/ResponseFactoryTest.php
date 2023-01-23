@@ -47,14 +47,10 @@ class ResponseFactoryTest extends TestCase
         $this->assertEquals($code, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     * @requires function imagecreate
-     */
     public function testCreateJsonResponseWithInvalidJson()
     {
-        $resource = imagecreate(16, 16);
-        ResponseFactory::createJsonResponse($resource);
+        $this->expectException(JsonException::class);
+        ResponseFactory::createJsonResponse("\xB1\x31");
     }
 
     public function testCreateTextResponse()
@@ -90,11 +86,9 @@ class ResponseFactoryTest extends TestCase
         $this->assertEquals(302, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testCreateRedirectResponseWithEmptyLocation()
     {
+        $this->expectException(InvalidArgumentException::class);
         ResponseFactory::createRedirectResponse("");
     }
 

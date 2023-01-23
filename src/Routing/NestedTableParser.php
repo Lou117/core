@@ -1,22 +1,15 @@
-<?php
-/**
- * Created by PhpStorm.
- * User: sylvain
- * Date: 2019-02-08
- * Time: 17:47
- */
+<?php declare(strict_types=1);
 namespace Lou117\Core\Routing;
 
-use \LogicException;
+use LogicException;
 
 class NestedTableParser extends AbstractTableParser
 {
     /**
-     * Includes PHP file located at given $routing_table_file_path, parses it as a Core v3.1+ nested routing table, and
-     * returns an array of Route instances.
+     * Includes PHP file located at given `$routing_table_file_path`, parses it as a Core v3.1+ nested routing table,
+     * and returns an array of `Route` instances.
      *
-     * File existence is checked by Core::loadRoutingTableFile() method.
-     *
+     * File existence is checked by `Core::loadRoutingTableFile()` method.
      * @param string $routing_table_file_path - routing table file path.
      * @return Route[]
      */
@@ -24,7 +17,7 @@ class NestedTableParser extends AbstractTableParser
     {
         $fileRoutes = require($routing_table_file_path);
 
-        if (is_array($fileRoutes) === false) {
+        if (!is_array($fileRoutes)) {
             throw new LogicException("Legacy routing table file must be a PHP script returning an array");
         }
 
@@ -38,32 +31,33 @@ class NestedTableParser extends AbstractTableParser
     }
 
     /**
-     * Recursively parse given $routing_table_entry, using given $endpoint and overriding given $inherited_arguments and
-     * $inherited_attributes, if any.
-     *
-     * @param string $endpoint - Route endpoint.
-     * @param array $routing_table_entry - Routing table entry.
-     * @param array $inherited_arguments (optional, defaults to an empty array) - Arguments inherited from all parent route entries, if any.
-     * @param array $inherited_attributes (optional, defaults to an empty array) - Attributes inherited from all parent route entries, if any.
+     * Recursively parse given `$routing_table_entry`, using given `$endpoint` and overriding given
+     * `$inherited_arguments` and `$inherited_attributes`, if any.
+     * @param string $endpoint - route endpoint.
+     * @param array $routing_table_entry - routing table entry.
+     * @param array $inherited_arguments (optional, defaults to an empty array) - arguments inherited from all parent
+     * route entries, if any.
+     * @param array $inherited_attributes (optional, defaults to an empty array) - attributes inherited from all parent
+     * route entries, if any.
      * @return Route[]
      */
     protected function parseEntry(string $endpoint, array $routing_table_entry, array $inherited_arguments = [], array $inherited_attributes = []): array
     {
         $return = [];
 
-        if (substr($endpoint, 0, 1) !== "/") {
+        if (!str_starts_with($endpoint, "/")) {
             $endpoint = "/{$endpoint}";
         }
 
-        if (substr($endpoint, -1) === "/") {
+        if (str_ends_with($endpoint, "/")) {
             $endpoint = substr($endpoint, 0, strlen($endpoint) - 1);
         }
 
         $routing_table_entry = array_replace_recursive([
-            "methods" => [],
-            "children" => [],
-            "arguments" => $inherited_arguments,
-            "controller" => null
+            "methods"       => [],
+            "children"      => [],
+            "arguments"     => $inherited_arguments,
+            "controller"    => null
         ], $routing_table_entry);
 
         $routing_table_entry["methods"] = array_map(function($method){
@@ -80,7 +74,12 @@ class NestedTableParser extends AbstractTableParser
         );
 
         foreach ($routing_table_entry["children"] as $child_endpoint => $child_entry) {
-            $return = array_merge($return, self::parseEntry($endpoint.$child_endpoint, $child_entry, $routing_table_entry["arguments"], $attributes));
+            $return = array_merge($return, self::parseEntry(
+                $endpoint.$child_endpoint,
+                $child_entry,
+                $routing_table_entry["arguments"],
+                $attributes
+            ));
         }
 
         $route = new Route();
@@ -89,9 +88,7 @@ class NestedTableParser extends AbstractTableParser
         $route->attributes = $attributes;
 
         if (is_array($routing_table_entry["controller"])) {
-
             foreach ($routing_table_entry["controller"] as $method => $controller) {
-
                 if (in_array($method, $routing_table_entry["methods"])) {
                     $clonedRoute = clone $route;
                     $clonedRoute->methods = [$method];

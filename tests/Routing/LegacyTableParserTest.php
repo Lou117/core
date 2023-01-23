@@ -118,10 +118,10 @@ class LegacyTableParserTest extends TestCase
     /**
      * @depends testParserInstantiation
      * @param LegacyTableParser $parser
-     * @expectedException LogicException
      */
     public function testParserThrowsExceptionOnInvalidRoutingTable(LegacyTableParser $parser)
     {
+        $this->expectException(LogicException::class);
         $parser->parse(self::generateRoutingTableFile(true, true));
     }
 

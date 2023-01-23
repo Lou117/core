@@ -1,6 +1,7 @@
 # Migrating to Core v3.1
 Although being a minor release, *Core* v3.1 introduces some breaking changes when compared to *Core* v3.0. Here you can 
 find all these breaking changes, and strategies to ensure your transition to v3.1 is as smooth as possible.
+
 ## Routing table parsing changes
 This is the most obvious change in *Core* v3.1 : *Core* default routing table parser now handles nested routes, thus 
 routing table expected format has changed.
@@ -18,6 +19,7 @@ return [
 ```
 You can use [documentation](using_default_routing_table_parser.md) to update your routing table format before reverting 
 your app configuration to default *Core* routing table parser.
+
 ## *Core* PSR-11 container identifiers changes
 With *Core* v3.1, all identifiers used by *Core* in its internal PSR-11 container are prefixed (or namespaced) with 
 `core.`. Below is a matching table:

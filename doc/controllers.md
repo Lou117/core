@@ -1,7 +1,8 @@
 # Adding controllers
-*Core* does NOT implements controllers as middlewares. Although *Core* provides an `AbstractController` abstract class 
+*Core* does NOT implement controllers as middlewares. Although *Core* provides an `AbstractController` abstract class 
 as a suggested base for your controllers, you are free to not use it. The only thing *Core* will ensure is that your 
 controller method returns an instance of PSR-7 `ResponseInterface`.
+
 ## *Core* `AbstractController` abstract class
 *Core* provides `AbstractController` abstract class as a possible base for your controller classes. However, *Core* does 
 not enforce you to use it for a very good reason: it does not provide any specific functionality.
@@ -17,6 +18,7 @@ abstract class AbstractController
     }
 }
 ```
+
 ## Using *Core* container in controllers
 As of *Core* v3.1, *Core* container has *at least* these identifiers populated when passed to a controller class 
 constructor (other entries might be added by middlewares):
@@ -58,6 +60,7 @@ abstract class MyAbstractController extends CoreAbstractController
 ```
 You will most likely want to store *Core* container as a property of you own `AbstractController` class making it 
 available for your controllers methods, or store only some information individually: it's totally up to you.
+
 ## Adding controller methods bound to a route
 When declaring a route in your [routing table](routing.md), controllers are set as FQSEN (Fully Qualified Structural 
 Element Name, ex. `MyApp\Controller\MyController::myMethod`). *Core* validates this FQSEN *after* middlewares 
@@ -65,7 +68,7 @@ have been instantiated and run, just before your controller is being itself inst
 
 Your FQSEN is considered valid when:
 - its format is correct (ex. `MyApp\Controller\MyController::myMethod`);
-- given class can be autoload;
+- given class can be autoloaded;
 - given method is callable (*Core* uses `method_exists()` function).
 
 Of course, method implementation is up to you, but your method must return an instance of PSR-7 `ResponseInterface`. As 

@@ -1,39 +1,32 @@
-<?php
-/**
- * Created by PhpStorm.
- * User: sylvain
- * Date: 2019-02-08
- * Time: 17:47
- */
+<?php declare(strict_types=1);
 namespace Lou117\Core\Routing;
 
-use \LogicException;
+use LogicException;
 
 class LegacyTableParser extends AbstractTableParser
 {
     /**
-     * Includes PHP file located at given $file_path, parses its content as a Core v3.0.* routing table, and returns an
-     * array of Route instances.
+     * Includes PHP file located at given `$file_path`, parses its content as a Core v3.0.* routing table, and returns
+     * an array of `Route` instances.
      *
-     * File existence is checked by Core::loadRoutingTableFile() method.
-     *
+     * File existence is checked by `Core::loadRoutingTableFile()` method.
      * @param string $routing_table_file_path
      * @return Route[]
-     * @throws LogicException - when file located at given $file_path is not a PHP script returning an array.
+     * @throws LogicException - when file located at given `$file_path` is not a PHP script returning an array.
      */
     public function parse(string $routing_table_file_path): array
     {
         $fileRoutes = require($routing_table_file_path);
 
-        if (is_array($fileRoutes) === false) {
+        if (!is_array($fileRoutes)) {
             throw new LogicException("Legacy routing table file must be a PHP script returning an array");
         }
 
         $defaultRouteConfiguration = [
-            "methods" => [],
-            "endpoint" => null,
-            "arguments" => [],
-            "controller" => null
+            "methods"       => [],
+            "endpoint"      => null,
+            "arguments"     => [],
+            "controller"    => null
         ];
 
         $routes = [];

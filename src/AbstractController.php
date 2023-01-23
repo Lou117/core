@@ -1,11 +1,4 @@
-<?php
-/**
- * Created by PhpStorm.
- * User: Sylvain Glaçon
- * Date: 01/11/2017
- * Time: 17:06
- */
-
+<?php declare(strict_types=1);
 namespace Lou117\Core;
 
 use Lou117\Core\Container\Container;

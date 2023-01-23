@@ -1,4 +1,5 @@
 # Using *Core* default routing table parser (`NestedTableParser`)
+
 ## File format
 *Core* default `NestedTableParser` expects routing table file to be a PHP script returning an array, that can be empty:
 ```php
@@ -6,9 +7,10 @@
 /* MyApplication routing table */
 return [];
 ```
+
 ## File content
 At its most basic, ***Core* routing table array can be completely empty**: your application will simply return a `404` 
-HTTP response to all of incoming HTTP requests. To add a new route declaration to your routing table, just add a new 
+HTTP response to all incoming HTTP requests. To add a new route declaration to your routing table, just add a new 
 key-value pair to routing table array, with this format:
 ```php
 <?php
@@ -37,6 +39,7 @@ only if `{id}` is a digit). Please refer to FastRoute documentation to know all 
     before any controller being called**. With that being said, **this is not a very good practice**, because you will 
     be transforming a middleware into a controller, and PSR-15 stands that middlewares are meant for **common** request 
     and response processing.
+
 ### Defining different controller based on HTTP method
 Alternatively, you can define a different controller FQSEN for each allowed method: 
 ```php
@@ -58,9 +61,10 @@ return [
 ];
 ```
 In this example, a request to `GET /users` will trigger `MyApplication\UserController::all` method, although a request 
-to `POST /users` will trigger `MyApplication\UserController::create` method. Have you notice we added a third method 
+to `POST /users` will trigger `MyApplication\UserController::create` method. Have you noticed we added a third method 
 with a corresponding controller FQSEN? **This declaration will be ignored**, because `PUT` is not one of the allowed 
 methods in `methods`.
+
 ### Defining default values for endpoint actionable data (a.k.a. "arguments")
 For optional URI "arguments" (enclosed in `[]` in patterns), you can define default values within your route 
 declaration:
@@ -86,6 +90,7 @@ return [
 ```
 In this example, if `/blog` endpoint is requested without any page number, `Route::$arguments` property will be hydrated 
 using default value.
+
 ### Adding custom data to route declaration
 You are absolutely free to add any data to your route declaration:
 ```php
@@ -112,6 +117,7 @@ return [
 ```
 All data in routing table declaration that is not used by FastRoute nor *Core* is kept in `Route::$attributes` property 
 to be at your disposal anywhere in your application.
+
 ## Nested routes
 As of *Core* v3.1, default `NestedTableParser` handles nested routes:
 ```php
@@ -150,5 +156,5 @@ return [
 ];
 ```
 By adding `children` key to any route entry, you can nest any number of routes, and add children routes to children 
-routes with no limitation. Have you noticed the route attributes at parent and child level? **Children routes will 
-receive all parent (at all levels) route attributes and arguments**, and can override them.
+routes with no limitation. Have you noticed the route attributes at parent and child level? **Child routes will receive 
+all parent (at all levels) route attributes and arguments**, and can override them.
