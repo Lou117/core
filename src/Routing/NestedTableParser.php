@@ -96,7 +96,10 @@ class NestedTableParser extends AbstractTableParser
                     $return[] = $clonedRoute;
                 }
             }
-        } elseif (trim($routing_table_entry["controller"]) !== "") {
+        } elseif (
+            is_string($routing_table_entry["controller"])
+            && !empty(trim($routing_table_entry["controller"]))
+        ) {
             $route->methods = $routing_table_entry["methods"];
             $route->controller = $routing_table_entry["controller"];
             $return[] = $route;
